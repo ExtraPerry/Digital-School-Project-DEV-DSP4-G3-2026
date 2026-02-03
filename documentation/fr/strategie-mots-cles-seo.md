@@ -4,6 +4,13 @@
 
 Ce document présente la stratégie de référencement naturel (SEO) pour une plateforme de location de bateaux en peer-to-peer. L'analyse ci-dessous établit le choix du mot-clé principal et des termes secondaires permettant d'optimiser le positionnement organique de la plateforme.
 
+Note : On ne peut pas utiliser des noms d'autres entreprises dans les mots clés.
+
+## Placement des Mots-Clés
+
+- **Mot-clé principal** : Le mot-clé principal doit être intégré sur la page d'accueil (la page vers laquelle les utilisateurs arrivent).
+- **Mots-clés secondaires** : Les mots-clés secondaires peuvent être placés sur la page "À propos" / "Qui sommes-nous".
+
 ## Mot-Clé Principal
 
 **`"Location de bateau entre particuliers"`**
@@ -42,4 +49,3 @@ Le champ lexical complémentaire renforce le positionnement principal à travers
 - **`"Location de voilier particulier"`** (Segment : Passionnés)
 - **`"Louer un bateau à moteur pas cher"`** (Segment : Vacanciers)
 - **`"Location bateau sans skipper"`** (Utilisateurs titulaires du permis)
-- **`"Airbnb du bateau"`** (Terminologie populaire pour ce type de service)

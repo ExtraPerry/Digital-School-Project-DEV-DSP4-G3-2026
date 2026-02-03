@@ -4,6 +4,13 @@
 
 This document outlines the search engine optimization (SEO) strategy for a peer-to-peer boat rental platform. The following analysis establishes the selection of the primary keyword and secondary terms designed to optimize the platform's organic search positioning.
 
+Note : We cannot use another company name in any keyword.
+
+## Keyword Placement
+
+- **Primary keyword**: The primary keyword must be placed on the landing page (the page where users arrive).
+- **Secondary keywords**: Secondary keywords can be placed on the "About Us" page.
+
 ## Primary Keyword
 
 **`"Peer-to-peer boat rental"`**
@@ -42,4 +49,3 @@ The complementary lexical field reinforces the primary positioning through varia
 - **`"Private sailboat rental"`** (Segment: Enthusiasts)
 - **`"Rent a cheap motorboat"`** (Segment: Vacationers)
 - **`"Boat rental without skipper"`** (Licensed users)
-- **`"Airbnb of boats"`** (Popular terminology for this service type)
