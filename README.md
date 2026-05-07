@@ -2,9 +2,35 @@
 
 **DEV DSP4 – Groupe 3 – 2026**
 
+**Avertissement Légal :** Ce document et le site internet qui en découle s'inscrivent strictement dans le cadre d'un projet étudiant académique et fictif. L'entreprise « SailingLoc » n'a aucune existence légale ou commerciale. Par conséquent, la plateforme présentée est une démonstration technique sur laquelle aucun achat réel ni aucune réservation véritable ne sauraient être effectués.
+
 ---
 
 ## 🇫🇷 Français | 🇬🇧 English
+
+### How to use this project
+
+**EN**: To use this project locally you must make sure to do the following :
+
+- Install NPM packages/dependencies : ```npm install```
+- If no .supabase folder at the project root : ```npx supabase init```
+- Login into supabase : ```npx supabase login```
+- Link to supabase database : ```npx supabase link --project-ref "PROJECT_ID_HERE"```
+- Make sure remote DB is not ahead of local DB : ```npx supabase db pull```
+- Make sure to pull latest typescript types from supabase remote : ```npx supabase gen types typescript --schema public > supabase/database.types.ts```
+- Start the local supabase database : ```npx supabase start```
+- Get local supabase information to update .env file : ```npx supabase status```
+
+**FR**: Pour utiliser ce projet en local, vous devez vous assurer de faire les étapes suivantes :
+
+- Installer les packages/dépendances NPM : ```npm install```
+- Si pas de dossier .supabase à la racine du projet : ```npx supabase init```
+- Se connecter à supabase : ```npx supabase login```
+- Lier à la base de données supabase : ```npx supabase link --project-ref "PROJECT_ID_HERE"```
+- Assurez-vous que la DB distante n'est pas en avance sur la DB locale : ```npx supabase db pull```
+- Assurez-vous de récupérer les derniers types typescript depuis supabase distant : ```npx supabase gen types typescript --schema public > supabase/database.types.ts```
+- Démarrer la base de données supabase locale : ```npx supabase start```
+- Obtenir les informations supabase locales pour mettre à jour le fichier .env : ```npx supabase status```
 
 ### About the Project / À propos du projet
 
