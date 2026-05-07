@@ -14,7 +14,74 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      user_roles: {
+        Row: {
+          auth_id: string
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["user_roles_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auth_id: string
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["user_roles_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auth_id?: string
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["user_roles_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          auth_id: string
+          created_at: string
+          email: string | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          auth_id: string
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          auth_id?: string
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +90,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      user_roles_type: "VISITOR" | "RENTER" | "OWNER" | "ADMINISTRATOR"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +217,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      user_roles_type: ["VISITOR", "RENTER", "OWNER", "ADMINISTRATOR"],
+    },
   },
 } as const
