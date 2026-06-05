@@ -8,6 +8,7 @@ import { notFound } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { TanstackQueryClient } from "@/contexts/tanstack-query-client";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { ThemeProvider } from "@/contexts/theme-provider";
 
 const figtree = Figtree({
   subsets: ["latin"],
@@ -58,8 +59,15 @@ export default async function LocaleLayout({
       <body className={cn(`${figtree.className} font-figtree antialiased`, "")}>
         <TanstackQueryClient>
           <NextIntlClientProvider>
-            {children}
-            <Toaster position="bottom-right" />
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              {children}
+              <Toaster position="bottom-right" />
+            </ThemeProvider>
           </NextIntlClientProvider>
           <ReactQueryDevtools initialIsOpen={false} />
         </TanstackQueryClient>

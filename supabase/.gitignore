@@ -1,6 +1,6 @@
-# Supabase
+# Supabase CLI local state (do not commit)
 .branches
-.temp
+/.temp/        # linked project-ref from `supabase link`, pooler URL, etc.
 
 # dotenvx
 .env.keys

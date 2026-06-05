@@ -1,6 +1,6 @@
 "use server"
 
-import { Database } from "@/../supabase/database.types";
+import { Database } from "@/lib/supabase/database.types";
 import { createClient } from "@supabase/supabase-js";
 
 export default async function createSupabaseServerAdmin() {

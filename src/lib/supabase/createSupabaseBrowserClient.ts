@@ -1,7 +1,7 @@
 "use client"
 
 import { createBrowserClient } from '@supabase/ssr'
-import { Database } from "@/../supabase/database.types";
+import { Database } from "@/lib/supabase/database.types";
 
 export default function createSupabaseBrowserClient() {
 
