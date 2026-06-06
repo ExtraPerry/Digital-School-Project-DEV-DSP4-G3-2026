@@ -1,4 +1,4 @@
-create or replace function enforce_table_timestamps() 
+create or replace function public.enforce_table_timestamps() 
 returns trigger as $$ 
 begin 
 	-- for insert events 
@@ -28,7 +28,7 @@ create table public.users (
   updated_at timestamp with time zone not null default now(),
 
   -- Foreign Keys & Relations
-  auth_id uuid not null references auth.users(id) on delete cascade,
+  auth_id uuid unique not null references auth.users(id) on delete cascade,
 
   -- Users Data
   first_name text,
@@ -118,7 +118,7 @@ create trigger enforce_user_roles_requirements
 
 create trigger enforce_user_roles_timestamps 
   before insert or update on public.user_roles 
-  for each row execute function enforce_table_timestamps();
+  for each row execute function public.enforce_table_timestamps();
 
 alter table public.user_roles enable row level security;
 
@@ -133,7 +133,7 @@ create policy "Users can view their own role"
 ---------------------------------------
 
 -- Auto-creation Trigger (bypasses RLS)
-create or replace function public.handle_new_user()
+create or replace function public.handle_auth_user_insert()
 returns trigger as $$
 declare
   new_public_user_id uuid;
@@ -151,12 +151,12 @@ begin
 end;
 $$ language plpgsql security definer;
 
-create trigger on_auth_user_created
+create trigger on_auth_user_insert
   after insert on auth.users
-  for each row execute procedure public.handle_new_user();
+  for each row execute procedure public.handle_auth_user_insert();
 
 -- Auto-update Trigger (bypasses RLS)
-create or replace function public.handle_user_update()
+create or replace function public.handle_auth_user_update()
 returns trigger as $$
 begin
   update public.users
@@ -172,4 +172,4 @@ $$ language plpgsql security definer;
 drop trigger if exists on_auth_user_updated on auth.users;
 create trigger on_auth_user_updated
   after update on auth.users
-  for each row execute procedure public.handle_user_update();
+  for each row execute procedure public.handle_auth_user_update();
