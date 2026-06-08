@@ -1,0 +1,1 @@
+export const DEFAULT_TANSTACK_QUERY_STALE_TIME_IN_MS = 15 * 60 * 1000; //? MIN * SEC * MS

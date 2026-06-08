@@ -20,7 +20,7 @@ For product requirements, see [documentation/](documentation/).
 
 **SailingLoc** is a peer-to-peer boat rental platform developed as an academic project (DEV DSP4 G3 2026). The company is fictional; no real transactions occur.
 
-**Current state:** base Next.js 16 template. Scaffolding is in place (Supabase clients, i18n, theme, TanStack Query provider). Feature pages, data hooks, realtime, edge functions, and auth UI are **not yet implemented**.
+**Current state:** base Next.js 16 template. Scaffolding is in place (Supabase clients, i18n, theme, TanStack Query provider, `useSupabaseRealtime`, `useCurrentUser`, `fetchCurrentUser`, `useCurrentUserRole`, `fetchCurrentUserRole`). Feature pages, edge functions, and auth UI are **not yet implemented**.
 
 ---
 
@@ -52,19 +52,26 @@ src/
 │   ├── globals.css             # Tailwind + shadcn CSS variables
 │   └── [locale]/
 │       ├── layout.tsx          # Providers: Query, i18n, theme, toaster
-│       ├── page.tsx            # Home (Hello World)
 │       ├── not-found.tsx
-│       ├── (public)/           # Unauthenticated routes (empty)
+│       ├── (public)/           # Unauthenticated routes (home at page.tsx)
 │       ├── (authenticated)/    # Logged-in user routes (empty)
 │       └── (admin)/            # Admin-only routes (empty)
 ├── components/ui/              # shadcn primitives (button, sonner)
+├── constants/                  # Shared constants (e.g. TanstackQuery.ts)
 ├── contexts/                   # TanstackQueryClient, ThemeProvider
-├── hooks/                      # Empty — all query/realtime hooks go here
+├── hooks/                      # Domain React Query hooks + useSupabaseRealtime
+│   ├── useSupabaseRealtime.ts  # Shared realtime + cache invalidation primitive
+│   ├── useCurrentUser.ts       # Example domain hook
+│   └── useCurrentUserRole.ts   # Current user role domain hook
+├── queries/                    # Pure async queryFn functions (no React hooks)
+│   ├── fetchCurrentUser.ts     # Example fetch function
+│   └── fetchCurrentUserRole.ts # Current user role fetch function
 ├── i18n/                       # routing, request, navigation
 ├── lib/
 │   ├── utils.ts                # cn() helper
 │   └── supabase/               # Client factories + generated types
-└── proxy.ts                    # next-intl locale routing (Next.js 16 proxy)
+│       └── updateSupabaseSession.ts  # Proxy session refresh helper
+└── proxy.ts                    # Session refresh + route whitelist + locale routing
 
 messages/                       # en.json, fr.json (project root)
 supabase/
@@ -77,7 +84,7 @@ supabase/
         └── deno.json           # Function-specific Deno deps (one per function)
 ```
 
-**Path alias:** `@/`* → `src/*` ([tsconfig.json](tsconfig.json)).
+**Path alias:** `@/`* → `src/`* ([tsconfig.json](tsconfig.json)).
 
 ---
 
@@ -88,8 +95,9 @@ flowchart TB
   subgraph frontend [Next.js App]
     Pages["app/[locale]/(public|authenticated|admin)"]
     Forms["TanStack Form + Zod"]
-    Hooks["src/hooks (React Query)"]
-    RealtimeHook["useSupabaseRealtime (single hook)"]
+    DomainHooks["src/hooks (domain hooks)"]
+    RealtimeHook["useSupabaseRealtime"]
+    Queries["src/queries (queryFn)"]
     UI["shadcn/ui components"]
   end
 
@@ -108,18 +116,19 @@ flowchart TB
   end
 
   Pages --> Forms
-  Pages --> Hooks
-  Hooks --> BrowserClient
-  Hooks --> ServerClient
+  Pages --> DomainHooks
+  DomainHooks --> RealtimeHook
+  DomainHooks -->|"optional: auth cache updates"| BrowserClient
+  RealtimeHook --> Queries
+  Queries --> BrowserClient
   RealtimeHook --> BrowserClient
-  RealtimeHook --> Hooks
+  RealtimeHook -->|"postgres_changes"| Realtime
   BrowserClient --> DB
   BrowserClient --> Auth
-  BrowserClient --> Realtime
   ServerClient --> DB
   AdminClient --> DB
   EdgeFn --> DB
-  Hooks -.->|"complex logic"| EdgeFn
+  DomainHooks -.->|"complex logic"| EdgeFn
 ```
 
 
@@ -137,7 +146,22 @@ flowchart TB
   - `[src/i18n/routing.ts](src/i18n/routing.ts)` — `en` / `fr`, default `en`
   - `[src/i18n/request.ts](src/i18n/request.ts)` — loads `[messages/{locale}.json](messages/en.json)`
   - `[src/i18n/navigation.ts](src/i18n/navigation.ts)` — locale-aware `Link`, `redirect`, `useRouter`
-  - `[src/proxy.ts](src/proxy.ts)` — Next.js 16 proxy (replaces deprecated `middleware.ts`) for locale detection
+  - `[src/proxy.ts](src/proxy.ts)` — Next.js 16 proxy (replaces deprecated `middleware.ts`) for session refresh, route protection, and locale detection
+  - `[src/lib/supabase/updateSupabaseSession.ts](src/lib/supabase/updateSupabaseSession.ts)` — Supabase client for proxy; refreshes auth cookies via `getUser()`
+
+#### Proxy route whitelist
+
+Route groups do **not** appear in URLs. Every page must be registered explicitly in one of three arrays at the top of `[src/proxy.ts](src/proxy.ts)`:
+
+
+| Array                  | Access                                                          |
+| ---------------------- | --------------------------------------------------------------- |
+| `PUBLIC_ROUTES`        | Anyone (no auth required)                                       |
+| `AUTHENTICATED_ROUTES` | Logged-in Supabase user required                                |
+| `ADMIN_ROUTES`         | Logged-in user with `ADMINISTRATOR` role in `public.user_roles` |
+
+
+**Default deny:** paths not listed in any array redirect to `/{locale}` (home). When adding a page under `(public)`, `(authenticated)`, or `(admin)`, add its locale-stripped path (e.g. `/dashboard`, `/login`) to the matching array in the same change.
 
 All UI strings MUST use `next-intl` with keys in the `messages/` JSON files. Do not hardcode user-facing text.
 
@@ -156,23 +180,72 @@ All UI strings MUST use `next-intl` with keys in the `messages/` JSON files. Do 
   - `createSupabaseBrowserClient` — client components
   - `createSupabaseServerClient` — server components / server actions
   - `createSupabaseServerAdmin` — privileged server-only ops (`NEXT_PRIVATE_SUPABASE_ADMIN_KEY`)
+
+#### Queries vs hooks
+
+Data fetching is split across two layers:
+
+
+| Layer                          | Responsibility                                                                                                                                                                                       | Example                                        |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| `[src/queries/](src/queries/)` | Pure async functions passed as `queryFn` to TanStack Query. Perform Supabase calls via client factories. **Throw on error.** No React hooks, no Realtime subscriptions.                              | `fetchCurrentUser()`, `fetchCurrentUserRole()` |
+| `[src/hooks/](src/hooks/)`     | React hooks consumed by components. Export query-key constants. Call `useSupabaseRealtime({ queryKey, queryFn, realtimeSubscriptions })`. May add domain-specific cache logic (e.g. auth listeners). | `useCurrentUser()`, `useCurrentUserRole()`     |
+
+
+Canonical example:
+
+```ts
+// src/queries/fetchCurrentUser.ts
+// All queries should always have a predefined return type
+export async function fetchCurrentUser(): Promise<ExpectedResultHere> {
+  // supabase call via createSupabaseBrowserClient; throw on error
+}
+
+// src/hooks/useCurrentUser.ts
+export const CURRENT_USER_QUERY_KEY = ["current-user"] as const;
+
+export function useCurrentUser() {
+  return useSupabaseRealtime({
+    queryKey: CURRENT_USER_QUERY_KEY,
+    queryFn: fetchCurrentUser,
+    realtimeSubscriptions: [{ table: "users", filter: `auth_id=eq.${authId}` }],
+  });
+}
+```
+
 - Wrap each resource in a dedicated hook under `[src/hooks/](src/hooks/)` using `@tanstack/react-query`.
-- **All Supabase DB hooks MUST use `useSupabaseRealtime` for cache invalidation.** Any hook that reads or writes Supabase data must call `useSupabaseRealtime` directly, passing the query keys it manages, so that when the underlying data is modified (insert, update, delete), the hook's cached data is invalidated automatically. Do **not** write raw `supabase.channel()` subscriptions in components or data hooks, and do not use manual polling.
-- **Query client defaults** (apply in `[src/contexts/tanstack-query-client.tsx](src/contexts/tanstack-query-client.tsx)`):
-  - `staleTime: 15 * 60 * 1000` (15 min backup invalidation only — not the primary refresh mechanism)
-  - Primary invalidation via `useSupabaseRealtime` (Postgres changes + auth events) — not polling
-- **Single realtime hook** — `useSupabaseRealtime` in `src/hooks/`:
-  - Called directly inside each data hook that needs invalidation (not mounted at the root layout)
-  - Encapsulates all Supabase Realtime subscription logic in one place
-  - Subscribes to relevant Postgres changes per table/resource
-  - Listens to auth events for the current user (`SIGNED_IN`, `SIGNED_OUT`, `TOKEN_REFRESHED`, `USER_UPDATED`)
-  - Calls `queryClient.invalidateQueries()` with defined query-key rules when matching data changes
-  - Data hooks pass their query keys to `useSupabaseRealtime`; they do not implement Realtime subscriptions themselves
-- **Query-key naming convention:**
-  - `['users', userId]`
-  - `['boats', 'list', filters]`
-  - `['bookings', bookingId]`
-  - Use a consistent `[resource, ...identifiers]` pattern
+- **All Supabase DB hooks MUST use `useSupabaseRealtime` for cache invalidation.** Any hook that reads Supabase data must call `useSupabaseRealtime`, passing the query keys it manages, so that when the underlying data is modified (insert, update, delete), the hook's cached data is invalidated automatically. Do **not** write raw `supabase.channel()` subscriptions in components or data hooks, and do not use manual polling.
+
+#### Query client defaults
+
+Configured in `[src/contexts/tanstack-query-client.tsx](src/contexts/tanstack-query-client.tsx)` using `DEFAULT_TANSTACK_QUERY_STALE_TIME_IN_MS` from `[src/constants/TanstackQuery.ts](src/constants/TanstackQuery.ts)`:
+
+- `staleTime: 15 * 60 * 1000` (15 min backup invalidation only — not the primary refresh mechanism)
+- Primary invalidation via `useSupabaseRealtime` (Postgres changes) — not polling
+
+#### `useSupabaseRealtime` contract
+
+`useSupabaseRealtime` in `[src/hooks/useSupabaseRealtime.ts](src/hooks/useSupabaseRealtime.ts)` is the **single shared primitive** for Postgres Realtime cache invalidation:
+
+- Called directly inside each data hook that needs invalidation (not mounted at the root layout)
+- Encapsulates all Supabase Realtime subscription logic in one place
+- Runs `useQuery` with caller-provided `queryKey`, `queryFn`, and optional `enabled`
+- Subscribes to `postgres_changes` per `realtimeSubscriptions` entry
+- Calls `queryClient.invalidateQueries({ queryKey })` when matching DB events occur
+- Domain hooks pass their query keys per invocation; they do not implement Realtime subscriptions themselves
+- Use exported types (`RealtimeSubscription`, filter string format) so table/column names stay aligned with `[src/lib/supabase/database.types.ts](src/lib/supabase/database.types.ts)`
+
+#### Auth cache updates
+
+Auth-driven cache updates are **not** handled inside `useSupabaseRealtime`. When a domain hook needs auth-aware cache behavior, add it in the domain hook itself. Reference patterns: `[src/hooks/useCurrentUser.ts](src/hooks/useCurrentUser.ts)` and `[src/hooks/useCurrentUserRole.ts](src/hooks/useCurrentUserRole.ts)` use `supabase.auth.onAuthStateChange` to `setQueryData(null)` on `SIGNED_OUT` and `invalidateQueries` on `SIGNED_IN`, `TOKEN_REFRESHED`, or `USER_UPDATED`.
+
+#### Query-key naming convention
+
+- Export query-key constants from the domain hook file (e.g. `CURRENT_USER_QUERY_KEY = ["current-user"] as const`, `CURRENT_USER_ROLE_QUERY_KEY = ["current-user-role"] as const`)
+- `['users', userId]`
+- `['boats', 'list', filters]`
+- `['bookings', bookingId]`
+- Use a consistent `[resource, ...identifiers]` pattern
 
 ### Edge functions
 
@@ -296,7 +369,7 @@ Obtain local values via `npx supabase status` after `npx supabase start`.
 ### Secrets and version control
 
 - **Never commit** `.env`, API keys, or `NEXT_PRIVATE_SUPABASE_ADMIN_KEY`.
-- **May commit** [`.env.example`](.env.example) with placeholder variable names only (not real values).
+- **May commit** `[.env.example](.env.example)` with placeholder variable names only (not real values).
 - **Supabase CLI local state** (`supabase/.temp`, `supabase/.branches`) is gitignored — do not force-add.
 - **Generated types** live at `src/lib/supabase/database.types.ts` and **should be committed** after regeneration.
 - **IDE local state** (`.vscode/`, `.idea/`, `.cursor/`, etc.) and **Obsidian workspace/cache** files are gitignored — personal editor and vault state must not be committed.
@@ -322,15 +395,12 @@ Obtain local values via `npx supabase status` after `npx supabase start`.
 Do **not** assume these exist. Build them when needed, following the conventions above.
 
 
-| Gap                   | Location / notes                                                                                       |
-| --------------------- | ------------------------------------------------------------------------------------------------------ |
-| No data hooks         | `src/hooks/` is empty                                                                                  |
-| No 15 min `staleTime` | `[tanstack-query-client.tsx](src/contexts/tanstack-query-client.tsx)` uses bare `new QueryClient()`    |
-| No realtime hook      | `useSupabaseRealtime` not created                                                                      |
-| No edge functions     | `supabase/functions/` does not exist; no per-function `deno.json`; no `[functions.*]` in `config.toml` |
-| Empty route groups    | `(public)`, `(authenticated)`, `(admin)` have no pages                                                 |
-| No auth UI            | No login/signup pages; no session proxy beyond Supabase client factories                               |
-| Minimal shadcn        | Only `button` and `sonner` installed                                                                   |
+| Gap                | Location / notes                                                                                       |
+| ------------------ | ------------------------------------------------------------------------------------------------------ |
+| No edge functions  | `supabase/functions/` does not exist; no per-function `deno.json`; no `[functions.*]` in `config.toml` |
+| Empty route groups | `(authenticated)` and `(admin)` have no pages; `(public)` has home only                                |
+| No auth UI         | No login/signup pages yet                                                                              |
+| Minimal shadcn     | Only `button` and `sonner` installed                                                                   |
 
 
 ---
@@ -352,7 +422,7 @@ Respect all conventions. Update `agent.md` in the **same change** when:
 | New directory, route group, or architectural layer | Directory structure + architecture diagram                                                          |
 | New Supabase table / migration                     | Database schema summary; update `seed.sql` if local fixtures needed; remove from gaps if applicable |
 | New edge function                                  | Edge functions section; `config.toml` / `deno.json` examples                                        |
-| New hook pattern or query-key convention           | CRUD / realtime section; register keys in `useSupabaseRealtime`                                     |
+| New hook pattern or query-key convention           | CRUD / realtime section; document query-key constants exported from domain hooks                    |
 | New env variable                                   | Environment variables table                                                                         |
 | New shadcn component or UI convention              | UI components section                                                                               |
 | Convention added or changed                        | Conventions section                                                                                 |
