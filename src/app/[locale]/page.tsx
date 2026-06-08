@@ -1,11 +1,5 @@
-import { useTranslations } from "next-intl";
+import { LandingMaquettePage } from "@/components/landing/landing-maquette-page";
 
 export default function Home() {
-  const t = useTranslations('Pages.HomePage');
-
-  return (
-      <h1>
-        {t("hello_world")}
-      </h1>
-  );
+  return <LandingMaquettePage />;
 }

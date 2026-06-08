@@ -55,7 +55,7 @@ export default async function LocaleLayout({
   setRequestLocale(locale);
 
   return (
-    <html className="h-full" lang={locale}>
+    <html className="h-full" lang={locale} suppressHydrationWarning>
       <body className={cn(`${figtree.className} font-figtree antialiased`, "")}>
         <TanstackQueryClient>
           <NextIntlClientProvider>
