@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { routing } from "@/i18n/routing";
 import { updateSupabaseSession } from "@/lib/supabase/updateSupabaseSession";
 
-const PUBLIC_ROUTES = ["/", "/login", "/register"] as const;
+const PUBLIC_ROUTES = ["/", "/login", "/register", "/search", "/boats"] as const;
 const AUTHENTICATED_ROUTES = [] as const; // e.g. "/dashboard", "/profile", "/bookings"
 const ADMIN_ROUTES = [] as const; // e.g. "/admin"
 

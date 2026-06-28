@@ -7,13 +7,173 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
+      boat_reviews: {
+        Row: {
+          author_name: string
+          boat_id: string
+          comment: string
+          created_at: string
+          id: string
+          rating: number
+          updated_at: string
+        }
+        Insert: {
+          author_name: string
+          boat_id: string
+          comment: string
+          created_at?: string
+          id?: string
+          rating: number
+          updated_at?: string
+        }
+        Update: {
+          author_name?: string
+          boat_id?: string
+          comment?: string
+          created_at?: string
+          id?: string
+          rating?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "boat_reviews_boat_id_fkey"
+            columns: ["boat_id"]
+            isOneToOne: false
+            referencedRelation: "boats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      boats: {
+        Row: {
+          badge: string | null
+          capacity: number
+          created_at: string
+          deposit_amount: number
+          description: string | null
+          draft_m: number
+          id: string
+          length_m: number
+          motorization: string | null
+          name: string
+          owner_id: string | null
+          port_id: string
+          price_per_day: number
+          rating: number
+          skipper_option: Database["public"]["Enums"]["boat_skipper_option"]
+          type: Database["public"]["Enums"]["boat_type"]
+          updated_at: string
+          width_m: number
+        }
+        Insert: {
+          badge?: string | null
+          capacity: number
+          created_at?: string
+          deposit_amount?: number
+          description?: string | null
+          draft_m?: number
+          id?: string
+          length_m: number
+          motorization?: string | null
+          name: string
+          owner_id?: string | null
+          port_id: string
+          price_per_day: number
+          rating?: number
+          skipper_option?: Database["public"]["Enums"]["boat_skipper_option"]
+          type: Database["public"]["Enums"]["boat_type"]
+          updated_at?: string
+          width_m?: number
+        }
+        Update: {
+          badge?: string | null
+          capacity?: number
+          created_at?: string
+          deposit_amount?: number
+          description?: string | null
+          draft_m?: number
+          id?: string
+          length_m?: number
+          motorization?: string | null
+          name?: string
+          owner_id?: string | null
+          port_id?: string
+          price_per_day?: number
+          rating?: number
+          skipper_option?: Database["public"]["Enums"]["boat_skipper_option"]
+          type?: Database["public"]["Enums"]["boat_type"]
+          updated_at?: string
+          width_m?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "boats_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "boats_port_id_fkey"
+            columns: ["port_id"]
+            isOneToOne: false
+            referencedRelation: "ports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ports: {
+        Row: {
+          country: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          country?: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          country?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           auth_id: string
@@ -90,6 +250,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      boat_skipper_option: "INCLUDED" | "OPTIONAL" | "NONE"
+      boat_type: "SAILBOAT" | "MOTORBOAT" | "CATAMARAN" | "YACHT"
       user_roles_type: "VISITOR" | "RENTER" | "OWNER" | "ADMINISTRATOR"
     }
     CompositeTypes: {
@@ -216,9 +378,15 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
+      boat_skipper_option: ["INCLUDED", "OPTIONAL", "NONE"],
+      boat_type: ["SAILBOAT", "MOTORBOAT", "CATAMARAN", "YACHT"],
       user_roles_type: ["VISITOR", "RENTER", "OWNER", "ADMINISTRATOR"],
     },
   },
 } as const
+

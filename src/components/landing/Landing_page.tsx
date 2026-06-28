@@ -1,16 +1,20 @@
 import { Playfair_Display } from "next/font/google";
 import { CalendarCheck, Search, Ship, Star } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { getLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { SailingLocLogo } from "@/components/brand/sailing-loc-logo";
-import { Button } from "@/components/ui/button";
-import { LocaleSwitcher } from "@/components/landing/locale-switcher";
+import { HeroSearchBar } from "@/components/landing/hero-search-bar";
+import { SiteHeader } from "@/components/layout/site-header";
+import { SiteFooter } from "@/components/layout/site-footer";
+import createSupabaseServerClient from "@/lib/supabase/createSupabaseServerClient";
+import { BOAT_TYPE_GRADIENTS } from "@/lib/boats";
 import { cn } from "@/lib/utils";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
   weight: ["600", "700"],
 });
+
+// --- Sub-components ---
 
 function TrustStat({
   value,
@@ -65,6 +69,70 @@ function StepCard({
   );
 }
 
+function BoatCard({
+  badge,
+  gradient,
+  href,
+  locale,
+  location,
+  name,
+  price,
+  rating,
+  size,
+  typeLabel,
+  unitLabel,
+}: {
+  badge?: string;
+  gradient: string;
+  href: string;
+  locale: string;
+  location: string;
+  name: string;
+  price: string;
+  rating: number;
+  size: number;
+  typeLabel: string;
+  unitLabel: string;
+}) {
+  return (
+    <Link
+      className="block overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm transition-shadow hover:shadow-md"
+      href={href}
+    >
+      <article>
+        <div
+          className={cn(
+            "flex h-40 items-start bg-gradient-to-br p-3",
+            gradient,
+          )}
+        >
+          {badge ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#1a2b48] shadow-sm">
+              {badge}
+            </span>
+          ) : null}
+        </div>
+        <div className="flex flex-col gap-1 p-4">
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-semibold text-[#1a2b48]">{name}</span>
+            <span className="flex items-center gap-1 text-sm font-medium text-[#1a2b48]">
+              <Star aria-hidden className="size-3.5 fill-[#c9866a] text-[#c9866a]" />
+              {rating.toLocaleString(locale)}
+            </span>
+          </div>
+          <p className="text-sm text-neutral-500">
+            {typeLabel} · {size.toLocaleString(locale)} m · {location}
+          </p>
+          <p className="mt-1">
+            <span className="text-lg font-bold text-[#1a2b48]">{price}</span>
+            <span className="text-sm text-neutral-500"> / {unitLabel}</span>
+          </p>
+        </div>
+      </article>
+    </Link>
+  );
+}
+
 function TestimonialCard({
   name,
   role,
@@ -90,8 +158,26 @@ function TestimonialCard({
   );
 }
 
-export function LandingMaquettePage() {
-  const t = useTranslations("Pages.LandingPage");
+export async function LandingPage() {
+  const t = await getTranslations("Pages.LandingPage");
+  const locale = await getLocale();
+  const priceFormatter = new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: "EUR",
+    maximumFractionDigits: 0,
+  });
+
+  const supabase = await createSupabaseServerClient();
+  const { data: ports } = await supabase
+    .from("ports")
+    .select("name")
+    .order("name");
+
+  const { data: boats } = await supabase
+    .from("boats")
+    .select("id, name, type, length_m, price_per_day, rating, badge, ports(name)")
+    .order("rating", { ascending: false })
+    .limit(4);
 
   const partnerKeys = [
     "partner_insurance",
@@ -102,117 +188,46 @@ export function LandingMaquettePage() {
 
   return (
     <div className="min-h-screen bg-[#f7f8fa] text-neutral-800">
-      <header className="sticky top-0 z-50 bg-[#1a2b48]">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <SailingLocLogo className="[&_span:last-child]:text-white" variant="light" />
-          <nav
-            aria-label="Main navigation"
-            className="hidden items-center gap-6 text-sm font-medium md:flex"
-          >
-            <Link
-              className="text-white/90 transition-colors hover:text-white"
-              href="#"
-            >
-              {t("nav_search_boat")}
-            </Link>
-            <Link
-              className="text-white/90 transition-colors hover:text-white"
-              href="#"
-            >
-              {t("nav_become_owner")}
-            </Link>
-            <Link
-              className="text-white/90 transition-colors hover:text-white"
-              href="#"
-            >
-              {t("nav_help")}
-            </Link>
-            <span aria-hidden className="text-white/30">
-              |
-            </span>
-            <LocaleSwitcher variant="dark" />
-          </nav>
-          <div className="flex items-center gap-3">
-            <Button
-              asChild
-              className="rounded-md border border-white/40 bg-transparent px-5 text-white shadow-none hover:bg-white/10"
-              size="sm"
-              variant="ghost"
-            >
-              <Link href="/login">{t("nav_login")}</Link>
-            </Button>
-            <Button
-              asChild
-              className="rounded-md bg-[#D68A6E] px-5 text-white hover:bg-[#c57d5f]"
-              size="sm"
-            >
-              <Link href="/register">{t("nav_register")}</Link>
-            </Button>
-          </div>
-        </div>
-      </header>
+      <SiteHeader />
 
       <main>
+        {/* Hero */}
         <section
           aria-labelledby="hero-heading"
           className="relative overflow-hidden bg-gradient-to-br from-[#1a2b48] via-[#243a5e] to-[#3d7a8a] text-white"
         >
-          <div className="mx-auto grid max-w-6xl gap-10 px-6 py-16 md:grid-cols-2 md:items-center md:py-24">
-            <div className="flex flex-col gap-6">
-              <p
-                className={cn(
-                  playfair.className,
-                  "text-lg font-semibold italic text-[#e8c4b0]",
-                )}
-              >
-                {t("hero_tagline")}
-              </p>
-              <h1
-                className={cn(
-                  playfair.className,
-                  "text-3xl font-bold leading-tight md:text-4xl lg:text-5xl",
-                )}
-                id="hero-heading"
-              >
-                {t("hero_heading")}
-              </h1>
-              <p className="max-w-lg text-base leading-relaxed text-white/85">
-                {t("hero_summary")}
-              </p>
-              <div className="flex flex-wrap gap-3 pt-2">
-                <Button
-                  asChild
-                  className="rounded-full bg-[#c9866a] px-6 text-white hover:bg-[#b5745a]"
-                  size="lg"
+          <div className="mx-auto max-w-6xl px-6 py-16 md:py-24">
+            <div className="grid gap-10 md:grid-cols-2 md:items-center">
+              <div className="flex flex-col gap-6">
+                <p
+                  className={cn(
+                    playfair.className,
+                    "text-lg font-semibold italic text-[#e8c4b0]",
+                  )}
                 >
-                  <Link href="#">{t("hero_cta")}</Link>
-                </Button>
-                <Button
-                  asChild
-                  className="rounded-full border-white/30 bg-white/10 px-6 text-white hover:bg-white/20"
-                  size="lg"
-                  variant="outline"
+                  {t("hero_tagline")}
+                </p>
+                <h1
+                  className={cn(
+                    playfair.className,
+                    "text-3xl font-bold leading-tight md:text-4xl lg:text-5xl",
+                  )}
+                  id="hero-heading"
                 >
-                  <Link href="#">{t("hero_cta_owner")}</Link>
-                </Button>
+                  {t("hero_heading")}
+                </h1>
+                <p className="max-w-lg text-base leading-relaxed text-white/85">
+                  {t("hero_summary")}
+                </p>
               </div>
             </div>
-
-            <div
-              aria-label={t("hero_image_alt")}
-              className="relative flex min-h-64 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-tr from-[#4a90a4]/40 to-[#c9866a]/30 shadow-2xl md:min-h-80"
-              role="img"
-            >
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_70%,rgba(255,255,255,0.15),transparent_60%)]" />
-              <Ship
-                aria-hidden
-                className="size-32 text-white/25 md:size-40"
-                strokeWidth={1}
-              />
+            <div className="pt-8">
+              <HeroSearchBar ports={(ports ?? []).map((port) => port.name)} />
             </div>
           </div>
         </section>
 
+        {/* Trust stats */}
         <section aria-labelledby="trust-heading">
           <h2 className="sr-only" id="trust-heading">
             {t("trust_boats_label")}
@@ -239,6 +254,51 @@ export function LandingMaquettePage() {
           </div>
         </section>
 
+        {/* Boat proposition */}
+        <section
+          aria-labelledby="boat-proposition-heading"
+          className="px-6 py-16 md:py-20"
+        >
+          <div className="mx-auto max-w-6xl">
+            <div className="mb-8 flex items-end justify-between gap-4">
+              <h2
+                className={cn(
+                  playfair.className,
+                  "text-3xl font-bold text-[#1a2b48] md:text-4xl",
+                )}
+                id="boat-proposition-heading"
+              >
+                {t("featured_boats_title")}
+              </h2>
+              <Link
+                className="shrink-0 text-sm font-semibold text-[#1a2b48] transition-colors hover:text-[#D68A6E]"
+                href="/search"
+              >
+                {t("featured_boats_cta")} →
+              </Link>
+            </div>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {(boats ?? []).map((boat) => (
+                <BoatCard
+                  badge={boat.badge ? t(`featured_badge_${boat.badge}`) : undefined}
+                  gradient={BOAT_TYPE_GRADIENTS[boat.type]}
+                  href={`/boats/${boat.id}`}
+                  key={boat.id}
+                  locale={locale}
+                  location={boat.ports?.name ?? ""}
+                  name={boat.name}
+                  price={priceFormatter.format(boat.price_per_day)}
+                  rating={boat.rating}
+                  size={boat.length_m}
+                  typeLabel={t(`search_type_${boat.type.toLowerCase()}`)}
+                  unitLabel={t("featured_boats_price_unit")}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Value proposition */}
         <section
           aria-labelledby="highlight-heading"
           className="px-6 py-16 md:py-20"
@@ -279,6 +339,7 @@ export function LandingMaquettePage() {
           </div>
         </section>
 
+        {/* How it works */}
         <section
           aria-labelledby="how-it-works-heading"
           className="bg-white px-6 py-16 md:py-20"
@@ -319,6 +380,7 @@ export function LandingMaquettePage() {
           </div>
         </section>
 
+        {/* Testimonials & partners */}
         <section
           aria-labelledby="testimonials-heading"
           className="px-6 py-16 md:py-20"
@@ -364,32 +426,7 @@ export function LandingMaquettePage() {
         </section>
       </main>
 
-      <footer className="bg-[#1a2b48] px-6 py-10 text-white">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-6">
-          <SailingLocLogo variant="light" />
-          <nav
-            aria-label="Footer navigation"
-            className="flex flex-wrap justify-center gap-6 text-sm text-white/70"
-          >
-            <Link className="transition-colors hover:text-white" href="#">
-              {t("footer_legal")}
-            </Link>
-            <Link className="transition-colors hover:text-white" href="#">
-              {t("footer_terms")}
-            </Link>
-            <Link className="transition-colors hover:text-white" href="#">
-              {t("footer_privacy")}
-            </Link>
-          </nav>
-          <LocaleSwitcher variant="dark" />
-          <p className="text-center text-sm text-white/60">
-            {t("footer_copyright")}
-          </p>
-          <p className="max-w-xl text-center text-xs text-white/40">
-            {t("footer_disclaimer")}
-          </p>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
