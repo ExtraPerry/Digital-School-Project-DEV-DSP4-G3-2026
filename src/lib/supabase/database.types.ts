@@ -7,33 +7,111 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
+      boat_availability_time_slots: {
+        Row: {
+          boat_id: string
+          created_at: string
+          end_date: string
+          id: string
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          boat_id: string
+          created_at?: string
+          end_date: string
+          id?: string
+          start_date: string
+          updated_at?: string
+        }
+        Update: {
+          boat_id?: string
+          created_at?: string
+          end_date?: string
+          id?: string
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "boat_availability_time_slots_boat_id_fkey"
+            columns: ["boat_id"]
+            isOneToOne: false
+            referencedRelation: "boats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      boat_equipment_links: {
+        Row: {
+          boat_id: string
+          equipment: Database["public"]["Enums"]["boat_equipment"]
+        }
+        Insert: {
+          boat_id: string
+          equipment: Database["public"]["Enums"]["boat_equipment"]
+        }
+        Update: {
+          boat_id?: string
+          equipment?: Database["public"]["Enums"]["boat_equipment"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "boat_equipment_links_boat_id_fkey"
+            columns: ["boat_id"]
+            isOneToOne: false
+            referencedRelation: "boats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      boat_reservations: {
+        Row: {
+          boat_id: string
+          created_at: string
+          end_date: string
+          id: string
+          renter_id: string | null
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          boat_id: string
+          created_at?: string
+          end_date: string
+          id?: string
+          renter_id?: string | null
+          start_date: string
+          updated_at?: string
+        }
+        Update: {
+          boat_id?: string
+          created_at?: string
+          end_date?: string
+          id?: string
+          renter_id?: string | null
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "boat_reservations_boat_id_fkey"
+            columns: ["boat_id"]
+            isOneToOne: false
+            referencedRelation: "boats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "boat_reservations_renter_id_fkey"
+            columns: ["renter_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       boat_reviews: {
         Row: {
           author_name: string
@@ -247,9 +325,49 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_boat_filter_bounds: {
+        Args: { p_port_name: string }
+        Returns: {
+          max_length: number
+          max_price: number
+          min_length: number
+          min_price: number
+        }[]
+      }
+      search_available_boats: {
+        Args: {
+          p_boat_types?: Database["public"]["Enums"]["boat_type"][]
+          p_equipment?: Database["public"]["Enums"]["boat_equipment"][]
+          p_from_date: string
+          p_max_length?: number
+          p_max_price?: number
+          p_min_length?: number
+          p_min_price?: number
+          p_page?: number
+          p_page_size?: number
+          p_port_name: string
+          p_skipper_included?: boolean
+          p_sort_by?: string
+          p_to_date: string
+        }
+        Returns: {
+          badge: string
+          capacity: number
+          id: string
+          length_m: number
+          motorization: string
+          name: string
+          port_name: string
+          price_per_day: number
+          rating: number
+          skipper_option: Database["public"]["Enums"]["boat_skipper_option"]
+          total_count: number
+          type: Database["public"]["Enums"]["boat_type"]
+        }[]
+      }
     }
     Enums: {
+      boat_equipment: "GPS" | "SLEEPING_BERTHS" | "EQUIPPED_KITCHEN"
       boat_skipper_option: "INCLUDED" | "OPTIONAL" | "NONE"
       boat_type: "SAILBOAT" | "MOTORBOAT" | "CATAMARAN" | "YACHT"
       user_roles_type: "VISITOR" | "RENTER" | "OWNER" | "ADMINISTRATOR"
@@ -378,15 +496,12 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
+      boat_equipment: ["GPS", "SLEEPING_BERTHS", "EQUIPPED_KITCHEN"],
       boat_skipper_option: ["INCLUDED", "OPTIONAL", "NONE"],
       boat_type: ["SAILBOAT", "MOTORBOAT", "CATAMARAN", "YACHT"],
       user_roles_type: ["VISITOR", "RENTER", "OWNER", "ADMINISTRATOR"],
     },
   },
 } as const
-

@@ -17,7 +17,7 @@ export async function SiteHeader() {
         >
           <Link
             className="text-white/90 transition-colors hover:text-white"
-            href="#"
+            href="/search"
           >
             {t("nav_search_boat")}
           </Link>

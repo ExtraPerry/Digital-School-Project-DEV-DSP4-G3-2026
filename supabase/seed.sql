@@ -15,6 +15,10 @@ declare
   v_user_renter1_id uuid;
   v_user_renter2_id uuid;
 
+  -- IDs ports
+  v_port_la_rochelle_id uuid;
+  v_port_marseille_id   uuid;
+
   -- IDs bateaux
   v_boat1_id uuid;
   v_boat2_id uuid;
@@ -105,91 +109,126 @@ begin
   -- Thomas Petit reste VISITOR (défaut)
 
   -- ==============================
-  -- 5. BATEAUX
+  -- 5. PORTS
   -- ==============================
-  insert into public.boats (owner, name, description, length_meters, width_meters, height_meters, motor_type, has_skipper, daily_cost_euro)
+  insert into public.ports (name, country)
+  values ('La Rochelle', 'France')
+  returning id into v_port_la_rochelle_id;
+
+  insert into public.ports (name, country)
+  values ('Marseille', 'France')
+  returning id into v_port_marseille_id;
+
+  -- ==============================
+  -- 6. BATEAUX
+  -- ==============================
+  insert into public.boats (
+    owner_id, port_id, name, type, length_m, width_m, draft_m, capacity,
+    motorization, skipper_option, price_per_day, deposit_amount, rating, badge, description
+  )
   values (
-    v_user_owner1_id, 'Mistral',
-    'Voilier de croisière en parfait état, idéal pour les longues traversées côtières. Équipé d''une VHF, d''un GPS chartplotter et d''une cuisine complète à bord. Capacité 6 personnes.',
-    12.50, 3.80, 1.90, 'SAIL', false, 450.00
+    v_user_owner1_id, v_port_la_rochelle_id, 'Mistral', 'SAILBOAT',
+    12.5, 3.8, 1.9, 6, 'Diesel auxiliaire', 'NONE', 450.00, 1500.00, 4.8, null,
+    'Voilier de croisière en parfait état, idéal pour les longues traversées côtières. Équipé d''une VHF, d''un GPS chartplotter et d''une cuisine complète à bord. Capacité 6 personnes.'
   ) returning id into v_boat1_id;
 
-  insert into public.boats (owner, name, description, length_meters, width_meters, height_meters, motor_type, has_skipper, daily_cost_euro)
+  insert into public.boats (
+    owner_id, port_id, name, type, length_m, width_m, draft_m, capacity,
+    motorization, skipper_option, price_per_day, deposit_amount, rating, badge, description
+  )
   values (
-    v_user_owner2_id, 'Belle Provence',
-    'Vedette de plaisance rapide et confortable pour des sorties en famille. Moteur récent, bimini intégré et table de cockpit. Idéale pour des journées côtières ensoleillées.',
-    8.20, 2.90, 1.10, 'MOTOR', false, 280.00
+    v_user_owner2_id, v_port_marseille_id, 'Belle Provence', 'MOTORBOAT',
+    8.2, 2.9, 1.1, 8, 'Moteur hors-bord', 'NONE', 280.00, 800.00, 4.6, null,
+    'Vedette de plaisance rapide et confortable pour des sorties en famille. Moteur récent, bimini intégré et table de cockpit. Idéale pour des journées côtières ensoleillées.'
   ) returning id into v_boat2_id;
 
-  insert into public.boats (owner, name, description, length_meters, width_meters, height_meters, motor_type, has_skipper, daily_cost_euro)
+  insert into public.boats (
+    owner_id, port_id, name, type, length_m, width_m, draft_m, capacity,
+    motorization, skipper_option, price_per_day, deposit_amount, rating, badge, description
+  )
   values (
-    v_user_owner1_id, 'L''Albatros',
-    'Voilier de plaisance robuste avec skipper disponible sur demande. Parfait pour les débutants souhaitant découvrir la voile en toute sécurité. Permis non obligatoire avec skipper à bord.',
-    9.80, 3.20, 1.60, 'SAIL', true, 320.00
+    v_user_owner1_id, v_port_la_rochelle_id, 'L''Albatros', 'SAILBOAT',
+    9.8, 3.2, 1.6, 6, 'Diesel auxiliaire', 'OPTIONAL', 320.00, 1000.00, 5.0, 'skipper',
+    'Voilier de plaisance robuste avec skipper disponible sur demande. Parfait pour les débutants souhaitant découvrir la voile en toute sécurité. Permis non obligatoire avec skipper à bord.'
   ) returning id into v_boat3_id;
 
-  insert into public.boats (owner, name, description, length_meters, width_meters, height_meters, motor_type, has_skipper, daily_cost_euro)
+  insert into public.boats (
+    owner_id, port_id, name, type, length_m, width_m, draft_m, capacity,
+    motorization, skipper_option, price_per_day, deposit_amount, rating, badge, description
+  )
   values (
-    v_user_owner2_id, 'Aquila',
-    'Bateau à moteur haut de gamme avec cabine équipée, idéal pour des week-ends prolongés. Motorisation puissante pour naviguer entre les îles méditerranéennes avec aisance et confort.',
-    10.50, 3.50, 1.70, 'MOTOR', false, 380.00
+    v_user_owner2_id, v_port_marseille_id, 'Aquila', 'YACHT',
+    10.5, 3.5, 1.7, 8, 'Moteur inboard', 'NONE', 380.00, 2000.00, 4.5, null,
+    'Bateau à moteur haut de gamme avec cabine équipée, idéal pour des week-ends prolongés. Motorisation puissante pour naviguer entre les îles méditerranéennes avec aisance et confort.'
   ) returning id into v_boat4_id;
 
-  insert into public.boats (owner, name, description, length_meters, width_meters, height_meters, motor_type, has_skipper, daily_cost_euro)
+  insert into public.boats (
+    owner_id, port_id, name, type, length_m, width_m, draft_m, capacity,
+    motorization, skipper_option, price_per_day, deposit_amount, rating, badge, description
+  )
   values (
-    v_user_owner1_id, 'Calypso',
-    'Voilier moderne à motorisation hybride (voile + électrique). Silencieux, écologique et autonome grâce à ses panneaux solaires. La navigation éco-responsable à son meilleur niveau.',
-    11.20, 3.60, 1.80, 'HYBRID', false, 550.00
+    v_user_owner1_id, v_port_la_rochelle_id, 'Calypso', 'SAILBOAT',
+    11.2, 3.6, 1.8, 6, 'Hybride (voile + électrique)', 'NONE', 550.00, 2500.00, 4.9, 'eco',
+    'Voilier moderne à motorisation hybride (voile + électrique). Silencieux, écologique et autonome grâce à ses panneaux solaires. La navigation éco-responsable à son meilleur niveau.'
   ) returning id into v_boat5_id;
 
   -- ==============================
-  -- 6. CRÉNEAUX DE DISPONIBILITÉ
+  -- 7. AVIS
+  -- ==============================
+  insert into public.boat_reviews (boat_id, author_name, rating, comment) values
+    (v_boat3_id, 'Léa Bernard',
+     5.0,
+     'Magnifique voilier, Marc est un propriétaire très arrangeant et de bon conseil. L''Albatros est en excellent état, équipement complet et moderne. Je recommande vivement pour une première expérience en voile !'),
+    (v_boat4_id, 'Lucas Martin',
+     4.5,
+     'Bateau en excellent état, moteur puissant et silencieux. Cabine très confortable pour passer la nuit en mer. Parfait pour notre week-end aux îles. Sophie est une propriétaire très attentionnée.');
+
+  -- ==============================
+  -- 8. DISPONIBILITÉS
+  -- Chaque bateau a une fenêtre de disponibilité couvrant les 6 prochains mois.
   -- ==============================
   insert into public.boat_availability_time_slots (boat_id, start_date, end_date) values
-    (v_boat1_id, '2026-07-01', '2026-08-31'),   -- Mistral        : juillet – août
-    (v_boat2_id, '2026-06-15', '2026-09-30'),   -- Belle Provence : mi-juin – fin septembre
-    (v_boat3_id, '2026-05-01', '2026-09-30'),   -- L'Albatros     : mai – fin septembre
-    (v_boat4_id, '2026-06-01', '2026-10-31'),   -- Aquila         : juin – fin octobre
-    (v_boat5_id, '2026-07-01', '2026-09-30');   -- Calypso        : juillet – fin septembre
+    -- Mistral : disponible toute la saison estivale 2026
+    (v_boat1_id, '2026-06-01', '2026-10-31'),
+    -- Belle Provence : disponible de juillet à septembre 2026
+    (v_boat2_id, '2026-07-01', '2026-09-30'),
+    -- L'Albatros : disponible toute la saison 2026
+    (v_boat3_id, '2026-06-01', '2026-10-31'),
+    -- Aquila : disponible de mai à octobre 2026
+    (v_boat4_id, '2026-05-01', '2026-10-31'),
+    -- Calypso : disponible de juin à octobre 2026
+    (v_boat5_id, '2026-06-01', '2026-10-31');
 
   -- ==============================
-  -- 7. RÉSERVATIONS
+  -- 9. RÉSERVATIONS
+  -- Quelques réservations confirmées pour tester l'exclusion par date.
+  -- L'Albatros est réservé du 20 au 27 juillet 2026 → doit être exclu
+  -- des recherches chevauchant cette période.
   -- ==============================
-
-  -- Passées (antérieures au 14/06/2026 → permettent de laisser un avis)
   insert into public.boat_reservations (renter_id, boat_id, start_date, end_date) values
-    (v_user_renter1_id, v_boat3_id, '2026-05-05', '2026-05-10'),  -- Léa   → L'Albatros
-    (v_user_renter2_id, v_boat4_id, '2026-04-15', '2026-04-22');  -- Lucas → Aquila
-
-  -- À venir
-  insert into public.boat_reservations (renter_id, boat_id, start_date, end_date) values
-    (v_user_renter1_id, v_boat1_id, '2026-07-10', '2026-07-17'),  -- Léa   → Mistral
-    (v_user_renter2_id, v_boat2_id, '2026-06-20', '2026-06-25');  -- Lucas → Belle Provence
+    (v_user_renter1_id, v_boat3_id, '2026-07-20', '2026-07-27'),
+    (v_user_renter2_id, v_boat2_id, '2026-08-10', '2026-08-17');
 
   -- ==============================
-  -- 8. COMMENTAIRES (uniquement sur des séjours passés)
+  -- 10. ÉQUIPEMENTS
   -- ==============================
-  insert into public.boat_reservation_comments (user_id, boat_id, content, score) values
-    (v_user_renter1_id, v_boat3_id,
-     'Magnifique voilier, Marc est un propriétaire très arrangeant et de bon conseil. L''Albatros est en excellent état, équipement complet et moderne. Je recommande vivement pour une première expérience en voile !',
-     5.0),
-    (v_user_renter2_id, v_boat4_id,
-     'Bateau en excellent état, moteur puissant et silencieux. Cabine très confortable pour passer la nuit en mer. Parfait pour notre week-end aux îles. Sophie est une propriétaire très attentionnée.',
-     4.5);
-
-  -- ==============================
-  -- 9. DOCUMENTS
-  -- ==============================
-  insert into public.boat_document_bucket_files (user_id, boat_id, name, type, mime_type, bucket_name, bucket_path) values
-    -- Marc Thévenot
-    (v_user_owner1_id, null,       'permis_bateau_marc_thevenot.pdf',   'BOAT_LICENSE',    'application/pdf', 'owner-documents', 'marc-thevenot/boat-license.pdf'),
-    (v_user_owner1_id, null,       'cv_marin_marc_thevenot.pdf',        'MARITIME_CV',     'application/pdf', 'owner-documents', 'marc-thevenot/maritime-cv.pdf'),
-    (v_user_owner1_id, v_boat1_id, 'assurance_mistral_2026.pdf',        'INSURANCE',       'application/pdf', 'owner-documents', 'marc-thevenot/insurance-mistral-2026.pdf'),
-    (v_user_owner1_id, v_boat3_id, 'assurance_albatros_2026.pdf',       'INSURANCE',       'application/pdf', 'owner-documents', 'marc-thevenot/insurance-albatros-2026.pdf'),
-    -- Sophie Laurent
-    (v_user_owner2_id, null,       'permis_bateau_sophie_laurent.pdf',  'BOAT_LICENSE',    'application/pdf', 'owner-documents', 'sophie-laurent/boat-license.pdf'),
-    (v_user_owner2_id, null,       'cv_marin_sophie_laurent.pdf',       'MARITIME_CV',     'application/pdf', 'owner-documents', 'sophie-laurent/maritime-cv.pdf'),
-    (v_user_owner2_id, v_boat2_id, 'assurance_belle_provence_2026.pdf', 'INSURANCE',       'application/pdf', 'owner-documents', 'sophie-laurent/insurance-belle-provence-2026.pdf'),
-    (v_user_owner2_id, v_boat4_id, 'contrat_type_aquila.pdf',           'RENTAL_CONTRACT', 'application/pdf', 'owner-documents', 'sophie-laurent/rental-contract-aquila.pdf');
+  insert into public.boat_equipment_links (boat_id, equipment) values
+    -- Mistral : GPS + cuisine équipée + couchages
+    (v_boat1_id, 'GPS'),
+    (v_boat1_id, 'EQUIPPED_KITCHEN'),
+    (v_boat1_id, 'SLEEPING_BERTHS'),
+    -- Belle Provence : GPS uniquement (day boat)
+    (v_boat2_id, 'GPS'),
+    -- L'Albatros : GPS + couchages
+    (v_boat3_id, 'GPS'),
+    (v_boat3_id, 'SLEEPING_BERTHS'),
+    -- Aquila : tout équipé
+    (v_boat4_id, 'GPS'),
+    (v_boat4_id, 'EQUIPPED_KITCHEN'),
+    (v_boat4_id, 'SLEEPING_BERTHS'),
+    -- Calypso : GPS + cuisine équipée + couchages
+    (v_boat5_id, 'GPS'),
+    (v_boat5_id, 'EQUIPPED_KITCHEN'),
+    (v_boat5_id, 'SLEEPING_BERTHS');
 
 end $$;

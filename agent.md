@@ -20,7 +20,12 @@ For product requirements, see [documentation/](documentation/).
 
 **SailingLoc** is a peer-to-peer boat rental platform developed as an academic project (DEV DSP4 G3 2026). The company is fictional; no real transactions occur.
 
-**Current state:** base Next.js 16 template. Scaffolding is in place (Supabase clients, i18n, theme, TanStack Query provider, `useSupabaseRealtime`, `useCurrentUser`, `fetchCurrentUser`, `useCurrentUserRole`, `fetchCurrentUserRole`). Feature pages, edge functions, and auth UI are **not yet implemented**.
+**Current state:** base scaffolding is complete. The following features are now implemented:
+- **Public search page** (`/search`) with port/date/type filtering, sidebar filters (type, skipper, price, length, equipment), sort, pagination, and Realtime cache invalidation.
+- **Landing page** with a hero search bar (TanStack Form + Zod) that prefills the search page.
+- Supabase clients, i18n, theme, TanStack Query provider, `useSupabaseRealtime`, `useCurrentUser`, `fetchCurrentUser`, `useCurrentUserRole`, `fetchCurrentUserRole`.
+
+Edge functions and auth UI are **not yet implemented**.
 
 ---
 
@@ -53,19 +58,42 @@ src/
 │   └── [locale]/
 │       ├── layout.tsx          # Providers: Query, i18n, theme, toaster
 │       ├── not-found.tsx
-│       ├── (public)/           # Unauthenticated routes (home at page.tsx)
+│       ├── (public)/           # Unauthenticated routes
+│       │   ├── page.tsx        # Home / landing page
+│       │   ├── search/
+│       │   │   └── page.tsx    # Search page (server component; renders SearchPageClient)
+│       │   ├── boats/[id]/     # Boat detail page (not yet implemented)
+│       │   ├── login/          # Auth pages (not yet implemented)
+│       │   └── register/       # Auth pages (not yet implemented)
 │       ├── (authenticated)/    # Logged-in user routes (empty)
 │       └── (admin)/            # Admin-only routes (empty)
-├── components/ui/              # shadcn primitives (button, sonner)
+├── components/
+│   ├── ui/                     # shadcn primitives (button, sonner, sheet, slider, pagination)
+│   ├── boats/
+│   │   └── boat-card.tsx       # Reusable boat card with badges, motorization, skipper icons
+│   ├── landing/
+│   │   ├── Landing_page.tsx    # Landing page (hero + featured boats)
+│   │   └── hero-search-bar.tsx # Hero form (TanStack Form + Zod); accepts defaultValues prop
+│   ├── layout/
+│   │   ├── site-header.tsx     # Server Component; links to /search
+│   │   └── site-footer.tsx
+│   └── search/
+│       ├── search-page-client.tsx  # "use client" orchestrator for the search page
+│       ├── search-summary-bar.tsx  # Compact filter pill + "Modifier" sheet trigger
+│       ├── search-breadcrumbs.tsx  # Breadcrumbs for the search page
+│       ├── search-filters.tsx      # Sidebar filters (TanStack Form + Zod)
+│       └── search-results.tsx      # Grid of BoatCards, sort dropdown, pagination
 ├── constants/                  # Shared constants (e.g. TanstackQuery.ts)
 ├── contexts/                   # TanstackQueryClient, ThemeProvider
 ├── hooks/                      # Domain React Query hooks + useSupabaseRealtime
 │   ├── useSupabaseRealtime.ts  # Shared realtime + cache invalidation primitive
-│   ├── useCurrentUser.ts       # Example domain hook
-│   └── useCurrentUserRole.ts   # Current user role domain hook
+│   ├── useCurrentUser.ts       # Current user domain hook
+│   ├── useCurrentUserRole.ts   # Current user role domain hook
+│   └── useBoats.ts             # Boat search hook; subscribes to boats, availability, reservations
 ├── queries/                    # Pure async queryFn functions (no React hooks)
-│   ├── fetchCurrentUser.ts     # Example fetch function
-│   └── fetchCurrentUserRole.ts # Current user role fetch function
+│   ├── fetchCurrentUser.ts     # Authenticated user profile
+│   ├── fetchCurrentUserRole.ts # Current user role
+│   └── fetchBoats.ts           # Calls search_available_boats + get_boat_filter_bounds RPCs
 ├── i18n/                       # routing, request, navigation
 ├── lib/
 │   ├── utils.ts                # cn() helper
@@ -161,6 +189,8 @@ Route groups do **not** appear in URLs. Every page must be registered explicitly
 | `ADMIN_ROUTES`         | Logged-in user with `ADMINISTRATOR` role in `public.user_roles` |
 
 
+**Current public routes:** `/`, `/login`, `/register`, `/search`, `/boats`.
+
 **Default deny:** paths not listed in any array redirect to `/{locale}` (home). When adding a page under `(public)`, `(authenticated)`, or `(admin)`, add its locale-stripped path (e.g. `/dashboard`, `/login`) to the matching array in the same change.
 
 All UI strings MUST use `next-intl` with keys in the `messages/` JSON files. Do not hardcode user-facing text.
@@ -242,10 +272,27 @@ Auth-driven cache updates are **not** handled inside `useSupabaseRealtime`. When
 #### Query-key naming convention
 
 - Export query-key constants from the domain hook file (e.g. `CURRENT_USER_QUERY_KEY = ["current-user"] as const`, `CURRENT_USER_ROLE_QUERY_KEY = ["current-user-role"] as const`)
-- `['users', userId]`
-- `['boats', 'list', filters]`
+- `['users', userId]` — single user
+- `['boats', 'list', filters]` — paginated boat search (`BOATS_LIST_QUERY_KEY_PREFIX` exported from `src/hooks/useBoats.ts`)
 - `['bookings', bookingId]`
 - Use a consistent `[resource, ...identifiers]` pattern
+
+**Implemented domain hooks:**
+
+| Hook | File | Query key |
+| ---- | ---- | --------- |
+| `useCurrentUser` | `src/hooks/useCurrentUser.ts` | `["current-user"]` |
+| `useCurrentUserRole` | `src/hooks/useCurrentUserRole.ts` | `["current-user-role"]` |
+| `useBoats(filters)` | `src/hooks/useBoats.ts` | `["boats", "list", filters]` |
+
+**Implemented query functions:**
+
+| Function | File | Purpose |
+| -------- | ---- | ------- |
+| `fetchCurrentUser` | `src/queries/fetchCurrentUser.ts` | Authenticated user profile |
+| `fetchCurrentUserRole` | `src/queries/fetchCurrentUserRole.ts` | Current user role |
+| `fetchBoats(filters)` | `src/queries/fetchBoats.ts` | Calls `search_available_boats` RPC; returns `PaginatedBoats` |
+| `fetchBoatFilterBounds(port)` | `src/queries/fetchBoats.ts` | Calls `get_boat_filter_bounds` RPC for slider bounds |
 
 ### Edge functions
 
@@ -296,14 +343,22 @@ verify_jwt = true
 3. `ENABLE ROW LEVEL SECURITY` + all `CREATE POLICY` statements in the same file
 4. Regenerate TypeScript types (see below)
 
-**Current schema** (`[20260507115308_init_database.sql](supabase/migrations/20260507115308_init_database.sql)`):
+**Current schema:**
 
+| Table | Description | RLS |
+| ----- | ----------- | --- |
+| `public.users` | Profile linked to `auth.users` | Users can view/update own row |
+| `public.user_roles` | Role enum: `VISITOR`, `RENTER`, `OWNER`, `ADMINISTRATOR` | Users can view own role |
+| `public.ports` | Rental ports (name, country) | Public SELECT |
+| `public.boats` | Boats listed for rental | Public SELECT |
+| `public.boat_reviews` | Reviews left by renters on boats | Public SELECT |
+| `public.boat_availability_time_slots` | Date windows when a boat is available | Public SELECT |
+| `public.boat_reservations` | Confirmed bookings that block availability | Public SELECT |
+| `public.boat_equipment_links` | Junction: boat ↔ `boat_equipment` enum | Public SELECT |
 
-| Table               | Description                                              | RLS                           |
-| ------------------- | -------------------------------------------------------- | ----------------------------- |
-| `public.users`      | Profile linked to `auth.users`                           | Users can view/update own row |
-| `public.user_roles` | Role enum: `VISITOR`, `RENTER`, `OWNER`, `ADMINISTRATOR` | Users can view own role       |
+**Enums:** `boat_type` (`SAILBOAT`, `MOTORBOAT`, `CATAMARAN`, `YACHT`), `boat_skipper_option` (`INCLUDED`, `OPTIONAL`, `NONE`), `boat_equipment` (`GPS`, `SLEEPING_BERTHS`, `EQUIPPED_KITCHEN`).
 
+**RPCs:** `search_available_boats(...)` — paginated boat search with availability/date filtering; `get_boat_filter_bounds(p_port_name)` — returns min/max price and length for sidebar sliders.
 
 Triggers: timestamp enforcement, role requirements (email + phone for elevated roles), auto-provision on auth signup/update.
 
@@ -328,7 +383,7 @@ npx supabase db reset
 
 - To re-apply migrations + seed without restarting the whole stack, use `db reset` (preferred for a clean local state).
 - When adding tables that need test data locally, update `seed.sql` in the **same change** and respect RLS (use `service_role` via SQL or insert data in a way policies allow).
-- Currently empty — add fixtures as features are built.
+- Seed data is populated: ports, boats, availability windows, reservations, equipment links (for local dev/testing).
 
 ### Storage and other Supabase config
 
@@ -395,12 +450,15 @@ Obtain local values via `npx supabase status` after `npx supabase start`.
 Do **not** assume these exist. Build them when needed, following the conventions above.
 
 
-| Gap                | Location / notes                                                                                       |
-| ------------------ | ------------------------------------------------------------------------------------------------------ |
-| No edge functions  | `supabase/functions/` does not exist; no per-function `deno.json`; no `[functions.*]` in `config.toml` |
-| Empty route groups | `(authenticated)` and `(admin)` have no pages; `(public)` has home only                                |
-| No auth UI         | No login/signup pages yet                                                                              |
-| Minimal shadcn     | Only `button` and `sonner` installed                                                                   |
+| Gap                   | Location / notes                                                                                        |
+| --------------------- | ------------------------------------------------------------------------------------------------------- |
+| No edge functions     | `supabase/functions/` does not exist; no per-function `deno.json`; no `[functions.*]` in `config.toml` |
+| Empty route groups    | `(authenticated)` and `(admin)` have no pages                                                           |
+| No auth UI            | `/login` and `/register` pages not yet implemented                                                      |
+| No booking flow       | `boat_reservations` table exists (Public SELECT only); no CREATE policy or booking UI yet               |
+| No boat detail page   | `/boats/[id]` route stub exists but has no content                                                      |
+| No boat images        | Gradient placeholders used; no storage bucket configured                                                |
+| No owner dashboard    | Owners cannot manage availability, equipment, or boats from the app yet                                 |
 
 
 ---
