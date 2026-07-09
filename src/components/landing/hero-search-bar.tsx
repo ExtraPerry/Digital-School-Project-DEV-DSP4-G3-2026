@@ -23,6 +23,11 @@ function toISODate(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
+/** Strips the time component so two dates from different sources (UTC vs local) compare correctly. */
+function toLocalMidnight(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
 export type HeroSearchDefaultValues = {
   port?: string;
   from?: Date;
@@ -118,7 +123,8 @@ export function HeroSearchBar({
             <DatePicker
               disabled={(date) => {
                 const toValue = form.getFieldValue("to");
-                return toValue instanceof Date ? date > toValue : false;
+                if (!(toValue instanceof Date)) return false;
+                return toLocalMidnight(date) > toLocalMidnight(toValue);
               }}
               id="search-from"
               onChange={(date) => date && field.handleChange(date)}
@@ -140,7 +146,8 @@ export function HeroSearchBar({
             <DatePicker
               disabled={(date) => {
                 const fromValue = form.getFieldValue("from");
-                return fromValue instanceof Date ? date < fromValue : false;
+                if (!(fromValue instanceof Date)) return false;
+                return toLocalMidnight(date) < toLocalMidnight(fromValue);
               }}
               id="search-to"
               onChange={(date) => date && field.handleChange(date)}
