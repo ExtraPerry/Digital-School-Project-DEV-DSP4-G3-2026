@@ -105,7 +105,7 @@ messages/                       # en.json, fr.json (project root)
 supabase/
 ├── config.toml                 # Local + storage + per-function edge config
 ├── migrations/                 # SQL migrations
-├── seed.sql                    # Local test/fixture data (not for production)
+├── seeds/                      # Modular local fixtures (01-04, glob-loaded; not for production)
 └── functions/                  # Edge functions (not yet scaffolded)
     └── <function-name>/
         ├── index.ts            # Function entrypoint
@@ -351,16 +351,25 @@ verify_jwt = true
 | `public.user_roles` | Role enum: `VISITOR`, `RENTER`, `OWNER`, `ADMINISTRATOR` | Users can view own role |
 | `public.ports` | Rental ports (name, country) | Public SELECT |
 | `public.boats` | Boats listed for rental | Public SELECT |
-| `public.boat_reviews` | Reviews left by renters on boats | Public SELECT |
+| `public.boat_reviews` | Reviews left by renters on boats (`reviewer_id` links to `users`) | Public SELECT |
 | `public.boat_availability_time_slots` | Date windows when a boat is available | Public SELECT |
-| `public.boat_reservations` | Confirmed bookings that block availability | Public SELECT |
+| `public.boat_reservations` | Bookings with `status`; active ones block availability | Public SELECT |
 | `public.boat_equipment_links` | Junction: boat ↔ `boat_equipment` enum | Public SELECT |
+| `public.payment_transactions` | Stripe payment records per reservation | Renter/owner/admin SELECT; writes service-role only |
+| `public.boat_media` | Public gallery images (`boat-images` bucket) | Public SELECT; owner/admin write |
+| `public.boat_documents` | Private owner documents (`boat-documents` bucket) | Owner/admin only (no public) |
 
-**Enums:** `boat_type` (`SAILBOAT`, `MOTORBOAT`, `CATAMARAN`, `YACHT`), `boat_skipper_option` (`INCLUDED`, `OPTIONAL`, `NONE`), `boat_equipment` (`GPS`, `SLEEPING_BERTHS`, `EQUIPPED_KITCHEN`).
+Column additions: `boats.is_published` / `published_at` (moderation), `ports.slug` (unique, kebab-case), `boat_reservations.status` / `total_amount` / `currency`.
 
-**RPCs:** `search_available_boats(...)` — paginated boat search with availability/date filtering; `get_boat_filter_bounds(p_port_name)` — returns min/max price and length for sidebar sliders.
+**Enums:** `boat_type` (`SAILBOAT`, `MOTORBOAT`, `CATAMARAN`, `YACHT`), `boat_skipper_option` (`INCLUDED`, `OPTIONAL`, `NONE`), `boat_equipment` (`GPS`, `SLEEPING_BERTHS`, `EQUIPPED_KITCHEN`), `reservation_status` (`PENDING`, `CONFIRMED`, `CANCELLED`, `COMPLETED`), `boat_document_type` (`INSURANCE`, `REGISTRATION`, `LICENSE`, `OTHER`).
 
-Triggers: timestamp enforcement, role requirements (email + phone for elevated roles), auto-provision on auth signup/update.
+**RPCs:** `search_available_boats(...)` — paginated boat search with availability/date filtering (only `is_published` boats; blocks on `PENDING`/`CONFIRMED` reservations); `get_boat_filter_bounds(p_port_name)` — returns min/max price and length for sidebar sliders.
+
+**Constraints:** `boat_reservations_no_overlap` — `btree_gist` exclusion constraint preventing overlapping active (`PENDING`/`CONFIRMED`) reservations on the same boat.
+
+Triggers: timestamp enforcement, role requirements (email + phone for elevated roles), auto-provision on auth signup/update, `recompute_boat_rating` (keeps `boats.rating` = average of its reviews).
+
+**`private` schema:** houses `SECURITY DEFINER` helpers kept out of the API-exposed `public` schema. `private.is_administrator()` (checks the caller's `ADMINISTRATOR` role) backs the admin RLS policies.
 
 After any migration, regenerate types:
 
@@ -372,18 +381,24 @@ npx supabase gen types typescript --schema public > src/lib/supabase/database.ty
 
 ### Local seed data
 
-Use `[supabase/seed.sql](supabase/seed.sql)` for **local testing only** — fixture users, sample boats, bookings, etc. Do **not** put seed data in migrations.
+Use the modular files in `[supabase/seeds/](supabase/seeds/)` for **local testing only** — fixture users, sample boats, bookings, etc. Do **not** put seed data in migrations.
 
-- Seed file is referenced in `[supabase/config.toml](supabase/config.toml)` under `[db.seed]` (`sql_paths = ["./seed.sql"]`, `enabled = true`).
+- Loaded via `[supabase/config.toml](supabase/config.toml)` `[db.seed]` glob (`sql_paths = ["./seeds/*.sql"]`, `enabled = true`). Files run **alphabetically**, hence the numeric prefixes:
+  - `01_reference_ports.sql` — ports (fixed UUIDs + slugs)
+  - `02_demo_auth_users.sql` — `auth.users` + `auth.identities` + profiles + roles
+  - `03_demo_boats.sql` — boats, equipment, reviews (`reviewer_id` linked), media
+  - `04_demo_availability.sql` — availability slots + reservations (mixed statuses)
+- No orchestrator file: psql meta-commands (`\i`, `\ir`) are not supported by the CLI seed runner. Do not add an aggregator; the glob handles ordering.
+- Seeds are **idempotent** (fixed UUIDs + `ON CONFLICT DO NOTHING`) and use **relative dates** (`current_date + ...`) so they stay valid over time.
+- `auth.identities` rows (provider `email`) are required for reliable local password login.
 - Seed runs automatically after migrations on a full local reset:
 
 ```bash
 npx supabase db reset
 ```
 
-- To re-apply migrations + seed without restarting the whole stack, use `db reset` (preferred for a clean local state).
-- When adding tables that need test data locally, update `seed.sql` in the **same change** and respect RLS (use `service_role` via SQL or insert data in a way policies allow).
-- Seed data is populated: ports, boats, availability windows, reservations, equipment links (for local dev/testing).
+- When adding tables that need test data locally, add/update the matching `seeds/*.sql` file in the **same change**. Seeds run as the `postgres` role and bypass RLS.
+- Demo accounts (local only) share the password `Sailing2026!` — e.g. `jean.voisin@sailingloc.com` (admin), `marc.thevenot@example.com` (owner), `lea.bernard@example.com` (renter).
 
 ### Storage and other Supabase config
 
@@ -397,7 +412,7 @@ npx supabase db reset
 | `[edge_runtime]`                    | Edge runtime settings (enabled, `deno_version = 2`) |
 
 
-Storage is enabled; no buckets configured yet. No `[functions.*]` blocks exist yet.
+Storage is enabled with two buckets: `boat-images` (public, gallery photos) and `boat-documents` (private, owner documents). Buckets are created in **SQL** (migration `20260709160100`) so they survive `db reset` and apply on `db push`; the `[storage.buckets.*]` blocks in `config.toml` only mirror local file-size / MIME limits. `storage.objects` RLS policies live in the same migration (public read for images, owner/admin write; owner/admin-only for documents, keyed on the `{boat_id}/...` path prefix). No `[functions.*]` blocks exist yet.
 
 ### UI components
 
@@ -455,10 +470,11 @@ Do **not** assume these exist. Build them when needed, following the conventions
 | No edge functions     | `supabase/functions/` does not exist; no per-function `deno.json`; no `[functions.*]` in `config.toml` |
 | Empty route groups    | `(authenticated)` and `(admin)` have no pages                                                           |
 | No auth UI            | `/login` and `/register` pages not yet implemented                                                      |
-| No booking flow       | `boat_reservations` table exists (Public SELECT only); no CREATE policy or booking UI yet               |
+| No booking flow       | `boat_reservations` has `status` + no-overlap constraint (Public SELECT only); no CREATE policy or booking UI yet (build via edge function) |
 | No boat detail page   | `/boats/[id]` route stub exists but has no content                                                      |
-| No boat images        | Gradient placeholders used; no storage bucket configured                                                |
-| No owner dashboard    | Owners cannot manage availability, equipment, or boats from the app yet                                 |
+| No boat image uploads | `boat-images` bucket + `boat_media` table exist and are seeded with placeholder paths; no upload UI and no actual files uploaded yet |
+| No payment processing | `payment_transactions` table exists (service-role writes only); no Stripe edge function yet             |
+| No owner dashboard    | Owners cannot manage availability, equipment, boats, media, or documents from the app yet               |
 
 
 ---

@@ -32,6 +32,22 @@
 - Démarrer la base de données supabase locale : `npx supabase start`
 - Obtenir les informations supabase locales pour mettre à jour le fichier .env : `npx supabase status`
 
+### Local seed data & demo accounts / Données de test et comptes de démo
+
+**EN**: Running `npx supabase db reset` applies every migration and then loads the modular fixtures in `supabase/seeds/` (`01_reference_ports` → `04_demo_availability`, run alphabetically). The seeds are idempotent and use relative dates, so the dataset stays valid over time. All demo accounts share the local-only password **`Sailing2026!`**:
+
+- `jean.voisin@sailingloc.com` — Administrator
+- `marc.thevenot@example.com`, `sophie.laurent@example.com` — Owners
+- `lea.bernard@example.com`, `lucas.martin@example.com` — Renters
+- `thomas.petit@example.com` — Visitor
+
+**FR**: La commande `npx supabase db reset` applique toutes les migrations puis charge les fixtures modulaires de `supabase/seeds/` (`01_reference_ports` → `04_demo_availability`, exécutées par ordre alphabétique). Les seeds sont idempotents et utilisent des dates relatives, afin de rester valides dans le temps. Tous les comptes de démonstration partagent le mot de passe **`Sailing2026!`** (usage local uniquement) :
+
+- `jean.voisin@sailingloc.com` — Administrateur
+- `marc.thevenot@example.com`, `sophie.laurent@example.com` — Propriétaires
+- `lea.bernard@example.com`, `lucas.martin@example.com` — Locataires
+- `thomas.petit@example.com` — Visiteur
+
 
 
 ### About the Project / À propos du projet
