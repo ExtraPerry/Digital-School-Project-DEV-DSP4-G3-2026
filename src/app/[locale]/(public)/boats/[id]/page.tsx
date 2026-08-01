@@ -284,6 +284,7 @@ export default async function BoatPage({
               </div>
 
               <BookingCalendar
+                boatId={boat.id}
                 depositAmount={boat.deposit_amount}
                 locale={locale}
                 pricePerDay={boat.price_per_day}

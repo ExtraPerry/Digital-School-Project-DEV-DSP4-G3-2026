@@ -412,3 +412,15 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 # declarative_schema_path = "./database"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+[functions.create-booking-checkout]
+enabled = true
+verify_jwt = true
+import_map = "./functions/create-booking-checkout/deno.json"
+entrypoint = "./functions/create-booking-checkout/index.ts"
+
+[functions.stripe-webhook]
+enabled = true
+verify_jwt = false
+import_map = "./functions/stripe-webhook/deno.json"
+entrypoint = "./functions/stripe-webhook/index.ts"

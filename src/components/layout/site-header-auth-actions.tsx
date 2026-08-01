@@ -55,6 +55,14 @@ export function SiteHeaderAuthActions({
           {t("nav_greeting", { name: firstName })}
         </span>
       ) : null}
+      <Button
+        asChild
+        className="rounded-md border border-white/40 bg-transparent px-5 text-white shadow-none hover:bg-white/10"
+        size="sm"
+        variant="ghost"
+      >
+        <Link href="/bookings">{t("nav_bookings")}</Link>
+      </Button>
       {isOwner ? (
         <Button
           asChild

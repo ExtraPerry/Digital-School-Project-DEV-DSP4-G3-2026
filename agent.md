@@ -25,9 +25,10 @@ For product requirements, see [documentation/](documentation/).
 - **Landing page** with a hero search bar (TanStack Form + Zod) that prefills the search page.
 - **Auth UI** (`/login`, `/register`) with email/password and Google OAuth callback.
 - **Owner space** (`/owner/*`): dashboard, boat CRUD, availability calendar, contractual documents upload, draft→published gating; self-serve `/become-owner` (RENTER→OWNER).
-- Supabase clients, i18n, theme, TanStack Query provider, `useSupabaseRealtime`, domain hooks for users/boats/owner data.
+- **Renter booking flow**: Stripe Checkout (test mode) via edge functions, booking history (`/bookings`), post-rental reviews tied to completed reservations, 10% platform commission recorded in DB.
+- Supabase clients, i18n, theme, TanStack Query provider, `useSupabaseRealtime`, domain hooks for users/boats/owner/booking data.
 
-Edge functions, booking/payment flows, and admin UI are **not yet implemented**.
+Admin UI is **not yet implemented**.
 
 ---
 
@@ -68,6 +69,7 @@ src/
 │       │   ├── register/
 │       │   └── become-owner/   # Self-serve RENTER → OWNER upgrade
 │       ├── (authenticated)/
+│       │   ├── bookings/       # Renter booking history + post-rental reviews
 │       │   └── owner/          # Owner space (OWNER/ADMIN gated in layout)
 │       │       ├── page.tsx    # Dashboard
 │       │       ├── boats/
@@ -79,6 +81,7 @@ src/
 │   ├── ui/                     # shadcn primitives
 │   ├── auth/
 │   ├── boats/
+│   ├── bookings/               # Bookings list + leave-review dialog
 │   ├── brand/
 │   ├── landing/
 │   ├── layout/
@@ -94,6 +97,9 @@ src/
 │   ├── useOwnerBoats.ts
 │   ├── useOwnerDocuments.ts
 │   ├── useBoatAvailabilitySlots.ts
+│   ├── useBoatReservations.ts  # Active boat reservations + my bookings
+│   ├── useBookingMutations.ts  # create-booking-checkout invoke
+│   ├── useReviewMutations.ts   # Post-rental review insert
 │   ├── usePorts.ts
 │   └── useOwnerMutations.ts    # create/update/publish boat, slots, documents, upgrade-to-owner
 ├── queries/
@@ -103,6 +109,7 @@ src/
 │   ├── fetchOwnerBoats.ts
 │   ├── fetchOwnerDocuments.ts
 │   ├── fetchBoatAvailabilitySlots.ts
+│   ├── fetchBoatReservations.ts
 │   └── fetchPorts.ts
 ├── i18n/                       # routing, request, navigation
 ├── lib/
@@ -115,11 +122,14 @@ messages/                       # en.json, fr.json (project root)
 supabase/
 ├── config.toml                 # Local + storage + per-function edge config
 ├── migrations/                 # SQL migrations
-├── seeds/                      # Modular local fixtures (01-05, glob-loaded; not for production)
-└── functions/                  # Edge functions (not yet scaffolded)
-    └── <function-name>/
-        ├── index.ts            # Function entrypoint
-        └── deno.json           # Function-specific Deno deps (one per function)
+├── seeds/                      # Modular local fixtures (01-06, glob-loaded; not for production)
+└── functions/
+    ├── create-booking-checkout/  # JWT required — PENDING reservation + Stripe Checkout
+    │   ├── index.ts
+    │   └── deno.json
+    └── stripe-webhook/           # Public webhook — confirm/cancel reservation
+        ├── index.ts
+        └── deno.json
 ```
 
 **Path alias:** `@/`* → `src/`* ([tsconfig.json](tsconfig.json)).
@@ -199,7 +209,9 @@ Route groups do **not** appear in URLs. Every page must be registered explicitly
 | `ADMIN_ROUTES`         | Logged-in user with `ADMINISTRATOR` role in `public.user_roles` |
 
 
-**Current public routes:** `/`, `/login`, `/register`, `/search`, `/boats`.
+**Current public routes:** `/`, `/login`, `/register`, `/search`, `/boats`, `/become-owner`.
+
+**Current authenticated routes:** `/owner`, `/bookings`.
 
 **Default deny:** paths not listed in any array redirect to `/{locale}` (home). When adding a page under `(public)`, `(authenticated)`, or `(admin)`, add its locale-stripped path (e.g. `/dashboard`, `/login`) to the matching array in the same change.
 
@@ -298,6 +310,8 @@ Auth-driven cache updates are **not** handled inside `useSupabaseRealtime`. When
 | `useOwnerDocuments` | `src/hooks/useOwnerDocuments.ts` | `["owner-documents"]` |
 | `useOwnerAvailabilitySlots` / `useBoatAvailabilitySlots` | `src/hooks/useBoatAvailabilitySlots.ts` | `["owner-availability"]` / `["boat-availability", boatId]` |
 | `usePorts` | `src/hooks/usePorts.ts` | `["ports"]` |
+| `useBoatActiveReservations(boatId)` | `src/hooks/useBoatReservations.ts` | `["bookings", "boat", boatId]` |
+| `useMyReservations` | `src/hooks/useBoatReservations.ts` | `["bookings", "mine"]` |
 
 **Implemented query functions:**
 
@@ -310,7 +324,16 @@ Auth-driven cache updates are **not** handled inside `useSupabaseRealtime`. When
 | `fetchOwnerBoats` / `fetchOwnerBoatById` | `src/queries/fetchOwnerBoats.ts` | Owner fleet (+ port join) |
 | `fetchOwnerDocuments` | `src/queries/fetchOwnerDocuments.ts` | Owner contractual documents |
 | `fetchBoatAvailabilitySlots` / `fetchOwnerAvailabilitySlots` | `src/queries/fetchBoatAvailabilitySlots.ts` | Availability windows |
+| `fetchBoatActiveReservations` / `fetchMyReservations` | `src/queries/fetchBoatReservations.ts` | Active boat bookings / renter history |
 | `fetchPorts` | `src/queries/fetchPorts.ts` | Port options for forms |
+
+**Implemented mutation hooks (non-Realtime):**
+
+| Hook | File | Purpose |
+| ---- | ---- | ------- |
+| `useCreateBookingCheckout` | `src/hooks/useBookingMutations.ts` | Invokes `create-booking-checkout` edge function |
+| `useCreateBoatReview` | `src/hooks/useReviewMutations.ts` | Inserts review for a COMPLETED reservation |
+| `useOwnerMutations` (multiple) | `src/hooks/useOwnerMutations.ts` | Boat CRUD, slots, documents, upgrade-to-owner |
 
 ### Edge functions
 
@@ -323,7 +346,11 @@ Use edge functions for logic beyond simple CRUD: payments, commissions, multi-ta
 Example layout:
 
 ```
-supabase/functions/process-payment/
+supabase/functions/create-booking-checkout/
+├── index.ts
+└── deno.json
+
+supabase/functions/stripe-webhook/
 ├── index.ts
 └── deno.json
 ```
@@ -332,9 +359,21 @@ Example config:
 
 ```toml
 # supabase/config.toml
-[functions.process-payment]
+[functions.create-booking-checkout]
 verify_jwt = true
+
+[functions.stripe-webhook]
+verify_jwt = false
 ```
+
+**Implemented edge functions:**
+
+| Function | `verify_jwt` | Purpose |
+| -------- | ------------ | ------- |
+| `create-booking-checkout` | `true` | Authenticated renter: validate dates, insert PENDING reservation, create Stripe Checkout Session, insert `payment_transactions` with 10% commission split, return checkout URL |
+| `stripe-webhook` | `false` | Stripe signature verification; `checkout.session.completed` → CONFIRMED/PAID; `checkout.session.expired` → CANCELLED/EXPIRED |
+
+Local secrets for edge functions live in `supabase/functions/.env` (gitignored). See `supabase/functions/.env.example`. Local webhook testing: `stripe listen --forward-to http://127.0.0.1:54321/functions/v1/stripe-webhook`.
 
 **Checklist when adding a new edge function:**
 
@@ -369,25 +408,25 @@ verify_jwt = true
 | `public.user_roles` | Role enum: `VISITOR`, `RENTER`, `OWNER`, `ADMINISTRATOR` | Users can view own role (`GRANT` select to `authenticated`) |
 | `public.ports` | Rental ports (name, country) | Public SELECT |
 | `public.boats` | Boats listed for rental (`is_published` default false for new rows) | Public SELECT published + own; owner INSERT/UPDATE/DELETE |
-| `public.boat_reviews` | Reviews left by renters on boats (`reviewer_id` links to `users`) | Public SELECT |
+| `public.boat_reviews` | Reviews left by renters on boats (`reviewer_id`, optional unique `reservation_id`) | Public SELECT; authenticated INSERT for own COMPLETED reservation |
 | `public.boat_availability_time_slots` | Date windows when a boat is available | Public SELECT; owner write |
-| `public.boat_reservations` | Bookings with `status`; active ones block availability | Public SELECT |
+| `public.boat_reservations` | Bookings with `status`; active ones block availability | Public SELECT; writes via service-role edge functions only |
 | `public.boat_equipment_links` | Junction: boat ↔ `boat_equipment` enum | Public SELECT |
-| `public.payment_transactions` | Stripe payment records per reservation | Renter/owner/admin SELECT; writes service-role only |
+| `public.payment_transactions` | Stripe payment records per reservation (`commission_amount`, `owner_amount`) | Renter/owner/admin SELECT; writes service-role only |
 | `public.boat_media` | Public gallery images (`boat-images` bucket) | Public SELECT; owner/admin write |
 | `public.boat_documents` | Contractual docs (`boat-documents` bucket). `LICENSE`/`SAILOR_CV` are owner-level (`boat_id` null); `INSURANCE` is boat-scoped | Owner/admin only |
 
-Column additions: `boats.is_published` / `published_at` (publish gated by required documents), `ports.slug` (unique, kebab-case), `boat_reservations.status` / `total_amount` / `currency`.
+Column additions: `boats.is_published` / `published_at` (publish gated by required documents), `ports.slug` (unique, kebab-case), `boat_reservations.status` / `total_amount` / `currency`, `payment_transactions.commission_amount` / `owner_amount`, `boat_reviews.reservation_id`.
 
 **Enums:** `boat_type` (`SAILBOAT`, `MOTORBOAT`, `CATAMARAN`, `YACHT`), `boat_skipper_option` (`INCLUDED`, `OPTIONAL`, `NONE`), `boat_equipment` (`GPS`, `SLEEPING_BERTHS`, `EQUIPPED_KITCHEN`), `reservation_status` (`PENDING`, `CONFIRMED`, `CANCELLED`, `COMPLETED`), `boat_document_type` (`INSURANCE`, `REGISTRATION`, `LICENSE`, `OTHER`, `SAILOR_CV`).
 
 **RPCs:** `search_available_boats(...)` — paginated boat search with availability/date filtering (only `is_published` boats; blocks on `PENDING`/`CONFIRMED` reservations); `get_boat_filter_bounds(p_port_name)` — returns min/max price and length for sidebar sliders; `upgrade_current_user_to_owner()` — promotes authenticated `RENTER` → `OWNER` (email+phone already enforced by role trigger).
 
-**Constraints:** `boat_reservations_no_overlap` — `btree_gist` exclusion constraint preventing overlapping active (`PENDING`/`CONFIRMED`) reservations on the same boat. Unique partial indexes: one `LICENSE` and one `SAILOR_CV` per owner; one `INSURANCE` per boat.
+**Constraints:** `boat_reservations_no_overlap` — `btree_gist` exclusion constraint preventing overlapping active (`PENDING`/`CONFIRMED`) reservations on the same boat. Unique partial indexes: one `LICENSE` and one `SAILOR_CV` per owner; one `INSURANCE` per boat. Unique `boat_reviews.reservation_id` (one review per rental).
 
 Triggers: timestamp enforcement, role requirements (email + phone for elevated roles), auto-provision on auth signup/update, `recompute_boat_rating` (keeps `boats.rating` = average of its reviews), `enforce_boat_document_owner` (document scoping rules), `enforce_boat_publish_requirements` (blocks `is_published → true` without LICENSE + SAILOR_CV + boat INSURANCE).
 
-**`private` schema:** houses `SECURITY DEFINER` helpers kept out of the API-exposed `public` schema. Helpers: `private.is_administrator()`, `private.current_public_user_id()`, `private.is_boat_owner(boat_id)`.
+**`private` schema:** houses `SECURITY DEFINER` helpers kept out of the API-exposed `public` schema. Helpers: `private.is_administrator()`, `private.current_public_user_id()`, `private.is_boat_owner(boat_id)`, `private.complete_finished_reservations()` (CONFIRMED→COMPLETED when `end_date` passed; stale PENDING→CANCELLED after 24h). Scheduled daily via `pg_cron` job `complete-finished-reservations`.
 
 After any migration, regenerate types:
 
@@ -407,6 +446,7 @@ Use the modular files in `[supabase/seeds/](supabase/seeds/)` for **local testin
   - `03_demo_boats.sql` — boats (incl. one draft `Horizon`), equipment, reviews, media
   - `04_demo_availability.sql` — availability slots + reservations (mixed statuses)
   - `05_demo_documents.sql` — owner LICENSE/SAILOR_CV + boat INSURANCE metadata (Horizon has no insurance)
+  - `06_demo_reservations.sql` — `payment_transactions` with commission split for seeded reservations
 - No orchestrator file: psql meta-commands (`\i`, `\ir`) are not supported by the CLI seed runner. Do not add an aggregator; the glob handles ordering.
 - Seeds are **idempotent** (fixed UUIDs + `ON CONFLICT DO NOTHING`) and use **relative dates** (`current_date + ...`) so they stay valid over time.
 - `auth.identities` rows (provider `email`) are required for reliable local password login.
@@ -431,7 +471,7 @@ npx supabase db reset
 | `[edge_runtime]`                    | Edge runtime settings (enabled, `deno_version = 2`) |
 
 
-Storage is enabled with two buckets: `boat-images` (public, gallery photos) and `boat-documents` (private, owner documents). Buckets are created in **SQL** (migration `20260709160100`) so they survive `db reset` and apply on `db push`; the `[storage.buckets.*]` blocks in `config.toml` only mirror local file-size / MIME limits. Path conventions: `boat-images/{boat_id}/...`, `boat-documents/{boat_id}/...` (boat-scoped), and `boat-documents/owners/{auth_id}/...` (owner-level LICENSE/SAILOR_CV). No `[functions.*]` blocks exist yet.
+Storage is enabled with two buckets: `boat-images` (public, gallery photos) and `boat-documents` (private, owner documents). Buckets are created in **SQL** (migration `20260709160100`) so they survive `db reset` and apply on `db push`; the `[storage.buckets.*]` blocks in `config.toml` only mirror local file-size / MIME limits. Path conventions: `boat-images/{boat_id}/...`, `boat-documents/{boat_id}/...` (boat-scoped), and `boat-documents/owners/{auth_id}/...` (owner-level LICENSE/SAILOR_CV). Edge function blocks: `[functions.create-booking-checkout]` (`verify_jwt = true`) and `[functions.stripe-webhook]` (`verify_jwt = false`).
 
 ### UI components
 
@@ -446,11 +486,14 @@ Storage is enabled with two buckets: `boat-images` (public, gallery photos) and 
 Do **not** commit `.env` or secret keys. Required variables:
 
 
-| Variable                          | Usage                        |
-| --------------------------------- | ---------------------------- |
-| `NEXT_PUBLIC_SUPABASE_URL`        | Supabase project URL         |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY`   | Browser + server anon client |
-| `NEXT_PRIVATE_SUPABASE_ADMIN_KEY` | Server admin client only     |
+| Variable                          | Usage                                                        |
+| --------------------------------- | ------------------------------------------------------------ |
+| `NEXT_PUBLIC_SUPABASE_URL`        | Supabase project URL                                         |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`   | Browser + server anon client                                 |
+| `NEXT_PRIVATE_SUPABASE_ADMIN_KEY` | Server admin client only                                     |
+| `STRIPE_SECRET_KEY`               | Stripe secret key (test mode); also in `supabase/functions/.env` |
+| `STRIPE_WEBHOOK_SECRET`           | Stripe webhook signing secret for `stripe-webhook`           |
+| `SITE_URL`                        | App origin for Checkout success/cancel redirects (e.g. `http://localhost:3000`) |
 
 
 Obtain local values via `npx supabase status` after `npx supabase start`.
@@ -486,12 +529,10 @@ Do **not** assume these exist. Build them when needed, following the conventions
 
 | Gap                   | Location / notes                                                                                        |
 | --------------------- | ------------------------------------------------------------------------------------------------------- |
-| No edge functions     | `supabase/functions/` does not exist; no per-function `deno.json`; no `[functions.*]` in `config.toml` |
 | Empty admin routes    | `(admin)` has no pages yet                                                                              |
-| No booking flow       | `boat_reservations` has `status` + no-overlap constraint (Public SELECT only); no CREATE policy or booking UI yet (build via edge function) |
 | No boat image uploads | `boat-images` bucket + `boat_media` table exist and are seeded with placeholder paths; no upload UI and no actual files uploaded yet |
-| No payment processing | `payment_transactions` table exists (service-role writes only); no Stripe edge function yet             |
-| No owner reservations page | Dashboard reservation/revenue/occupancy stats are placeholders until booking flow lands            |
+| No owner reservations page | Dashboard reservation/revenue/occupancy stats are placeholders until an owner bookings view lands  |
+| No Stripe Connect     | Commission is recorded in DB only (Checkout test mode); no owner payout onboarding                      |
 
 
 ---
