@@ -92,7 +92,15 @@ insert into public.boats (
    '20000000-0000-0000-0000-000000000003', 'Neptune', 'YACHT',
    15.0, 4.4, 2.1, 10, 'Deux moteurs inboard', 'INCLUDED', 980.00, 4000.00, 4.8, 'premium',
    'Yacht de luxe avec équipage, cabines VIP et espace de réception. L''expérience méditerranéenne ultime pour les grandes occasions.',
-   true, now())
+   true, now()),
+
+  -- 11. Horizon — MOTORBOAT draft, Brest, owner Marc (missing insurance → Completer)
+  ('30000000-0000-0000-0000-00000000000b',
+   (select id from public.users where auth_id = '10000000-0000-0000-0000-000000000002'),
+   '20000000-0000-0000-0000-000000000005', 'Horizon', 'MOTORBOAT',
+   6.8, 2.5, 0.8, 5, 'Essence hors-bord', 'NONE', 190.00, 500.00, 0.0, null,
+   'Brouillon d''annonce : vedette compacte pour sorties côtières à Brest. Assurance encore à téléverser avant publication.',
+   false, null)
 on conflict (id) do nothing;
 
 -- ------------------------------------------------------------

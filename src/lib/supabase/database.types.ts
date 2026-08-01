@@ -44,6 +44,57 @@ export type Database = {
           },
         ]
       }
+      boat_documents: {
+        Row: {
+          boat_id: string | null
+          created_at: string
+          document_type: Database["public"]["Enums"]["boat_document_type"]
+          id: string
+          mime_type: string | null
+          owner_id: string
+          storage_bucket: string
+          storage_path: string
+          updated_at: string
+        }
+        Insert: {
+          boat_id?: string | null
+          created_at?: string
+          document_type?: Database["public"]["Enums"]["boat_document_type"]
+          id?: string
+          mime_type?: string | null
+          owner_id: string
+          storage_bucket?: string
+          storage_path: string
+          updated_at?: string
+        }
+        Update: {
+          boat_id?: string | null
+          created_at?: string
+          document_type?: Database["public"]["Enums"]["boat_document_type"]
+          id?: string
+          mime_type?: string | null
+          owner_id?: string
+          storage_bucket?: string
+          storage_path?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "boat_documents_boat_id_fkey"
+            columns: ["boat_id"]
+            isOneToOne: false
+            referencedRelation: "boats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "boat_documents_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       boat_equipment_links: {
         Row: {
           boat_id: string
@@ -67,32 +118,85 @@ export type Database = {
           },
         ]
       }
+      boat_media: {
+        Row: {
+          alt_text: string | null
+          boat_id: string
+          created_at: string
+          id: string
+          is_cover: boolean
+          sort_order: number
+          storage_bucket: string
+          storage_path: string
+          updated_at: string
+        }
+        Insert: {
+          alt_text?: string | null
+          boat_id: string
+          created_at?: string
+          id?: string
+          is_cover?: boolean
+          sort_order?: number
+          storage_bucket?: string
+          storage_path: string
+          updated_at?: string
+        }
+        Update: {
+          alt_text?: string | null
+          boat_id?: string
+          created_at?: string
+          id?: string
+          is_cover?: boolean
+          sort_order?: number
+          storage_bucket?: string
+          storage_path?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "boat_media_boat_id_fkey"
+            columns: ["boat_id"]
+            isOneToOne: false
+            referencedRelation: "boats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       boat_reservations: {
         Row: {
           boat_id: string
           created_at: string
+          currency: string
           end_date: string
           id: string
           renter_id: string | null
           start_date: string
+          status: Database["public"]["Enums"]["reservation_status"]
+          total_amount: number | null
           updated_at: string
         }
         Insert: {
           boat_id: string
           created_at?: string
+          currency?: string
           end_date: string
           id?: string
           renter_id?: string | null
           start_date: string
+          status?: Database["public"]["Enums"]["reservation_status"]
+          total_amount?: number | null
           updated_at?: string
         }
         Update: {
           boat_id?: string
           created_at?: string
+          currency?: string
           end_date?: string
           id?: string
           renter_id?: string | null
           start_date?: string
+          status?: Database["public"]["Enums"]["reservation_status"]
+          total_amount?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -120,6 +224,7 @@ export type Database = {
           created_at: string
           id: string
           rating: number
+          reviewer_id: string | null
           updated_at: string
         }
         Insert: {
@@ -129,6 +234,7 @@ export type Database = {
           created_at?: string
           id?: string
           rating: number
+          reviewer_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -138,6 +244,7 @@ export type Database = {
           created_at?: string
           id?: string
           rating?: number
+          reviewer_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -146,6 +253,13 @@ export type Database = {
             columns: ["boat_id"]
             isOneToOne: false
             referencedRelation: "boats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "boat_reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -159,12 +273,14 @@ export type Database = {
           description: string | null
           draft_m: number
           id: string
+          is_published: boolean
           length_m: number
           motorization: string | null
           name: string
           owner_id: string | null
           port_id: string
           price_per_day: number
+          published_at: string | null
           rating: number
           skipper_option: Database["public"]["Enums"]["boat_skipper_option"]
           type: Database["public"]["Enums"]["boat_type"]
@@ -179,12 +295,14 @@ export type Database = {
           description?: string | null
           draft_m?: number
           id?: string
+          is_published?: boolean
           length_m: number
           motorization?: string | null
           name: string
           owner_id?: string | null
           port_id: string
           price_per_day: number
+          published_at?: string | null
           rating?: number
           skipper_option?: Database["public"]["Enums"]["boat_skipper_option"]
           type: Database["public"]["Enums"]["boat_type"]
@@ -199,12 +317,14 @@ export type Database = {
           description?: string | null
           draft_m?: number
           id?: string
+          is_published?: boolean
           length_m?: number
           motorization?: string | null
           name?: string
           owner_id?: string | null
           port_id?: string
           price_per_day?: number
+          published_at?: string | null
           rating?: number
           skipper_option?: Database["public"]["Enums"]["boat_skipper_option"]
           type?: Database["public"]["Enums"]["boat_type"]
@@ -228,12 +348,54 @@ export type Database = {
           },
         ]
       }
+      payment_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          external_id: string | null
+          id: string
+          provider: string
+          reservation_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          provider?: string
+          reservation_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          provider?: string
+          reservation_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_transactions_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: true
+            referencedRelation: "boat_reservations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ports: {
         Row: {
           country: string
           created_at: string
           id: string
           name: string
+          slug: string
           updated_at: string
         }
         Insert: {
@@ -241,6 +403,7 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          slug: string
           updated_at?: string
         }
         Update: {
@@ -248,6 +411,7 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          slug?: string
           updated_at?: string
         }
         Relationships: []
@@ -365,11 +529,22 @@ export type Database = {
           type: Database["public"]["Enums"]["boat_type"]
         }[]
       }
+      upgrade_current_user_to_owner: {
+        Args: Record<PropertyKey, never>
+        Returns: Database["public"]["Enums"]["user_roles_type"]
+      }
     }
     Enums: {
+      boat_document_type:
+        | "INSURANCE"
+        | "REGISTRATION"
+        | "LICENSE"
+        | "OTHER"
+        | "SAILOR_CV"
       boat_equipment: "GPS" | "SLEEPING_BERTHS" | "EQUIPPED_KITCHEN"
       boat_skipper_option: "INCLUDED" | "OPTIONAL" | "NONE"
       boat_type: "SAILBOAT" | "MOTORBOAT" | "CATAMARAN" | "YACHT"
+      reservation_status: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED"
       user_roles_type: "VISITOR" | "RENTER" | "OWNER" | "ADMINISTRATOR"
     }
     CompositeTypes: {
@@ -498,9 +673,17 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      boat_document_type: [
+        "INSURANCE",
+        "REGISTRATION",
+        "LICENSE",
+        "OTHER",
+        "SAILOR_CV",
+      ],
       boat_equipment: ["GPS", "SLEEPING_BERTHS", "EQUIPPED_KITCHEN"],
       boat_skipper_option: ["INCLUDED", "OPTIONAL", "NONE"],
       boat_type: ["SAILBOAT", "MOTORBOAT", "CATAMARAN", "YACHT"],
+      reservation_status: ["PENDING", "CONFIRMED", "CANCELLED", "COMPLETED"],
       user_roles_type: ["VISITOR", "RENTER", "OWNER", "ADMINISTRATOR"],
     },
   },

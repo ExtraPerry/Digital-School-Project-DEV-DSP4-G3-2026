@@ -21,7 +21,8 @@ insert into public.boat_availability_time_slots (id, boat_id, start_date, end_da
   ('60000000-0000-0000-0000-000000000007', '30000000-0000-0000-0000-000000000007', current_date, (current_date + interval '6 months')::date),
   ('60000000-0000-0000-0000-000000000008', '30000000-0000-0000-0000-000000000008', current_date, (current_date + interval '6 months')::date),
   ('60000000-0000-0000-0000-000000000009', '30000000-0000-0000-0000-000000000009', current_date, (current_date + interval '6 months')::date),
-  ('60000000-0000-0000-0000-00000000000a', '30000000-0000-0000-0000-00000000000a', current_date, (current_date + interval '6 months')::date)
+  ('60000000-0000-0000-0000-00000000000a', '30000000-0000-0000-0000-00000000000a', current_date, (current_date + interval '6 months')::date),
+  ('60000000-0000-0000-0000-00000000000b', '30000000-0000-0000-0000-00000000000b', current_date, (current_date + interval '6 months')::date)
 on conflict (id) do nothing;
 
 -- ------------------------------------------------------------

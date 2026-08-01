@@ -23,9 +23,11 @@ For product requirements, see [documentation/](documentation/).
 **Current state:** base scaffolding is complete. The following features are now implemented:
 - **Public search page** (`/search`) with port/date/type filtering, sidebar filters (type, skipper, price, length, equipment), sort, pagination, and Realtime cache invalidation.
 - **Landing page** with a hero search bar (TanStack Form + Zod) that prefills the search page.
-- Supabase clients, i18n, theme, TanStack Query provider, `useSupabaseRealtime`, `useCurrentUser`, `fetchCurrentUser`, `useCurrentUserRole`, `fetchCurrentUserRole`.
+- **Auth UI** (`/login`, `/register`) with email/password and Google OAuth callback.
+- **Owner space** (`/owner/*`): dashboard, boat CRUD, availability calendar, contractual documents upload, draft→published gating; self-serve `/become-owner` (RENTER→OWNER).
+- Supabase clients, i18n, theme, TanStack Query provider, `useSupabaseRealtime`, domain hooks for users/boats/owner data.
 
-Edge functions and auth UI are **not yet implemented**.
+Edge functions, booking/payment flows, and admin UI are **not yet implemented**.
 
 ---
 
@@ -61,39 +63,47 @@ src/
 │       ├── (public)/           # Unauthenticated routes
 │       │   ├── page.tsx        # Home / landing page
 │       │   ├── search/
-│       │   │   └── page.tsx    # Search page (server component; renders SearchPageClient)
-│       │   ├── boats/[id]/     # Boat detail page (not yet implemented)
-│       │   ├── login/          # Auth pages (not yet implemented)
-│       │   └── register/       # Auth pages (not yet implemented)
-│       ├── (authenticated)/    # Logged-in user routes (empty)
+│       │   ├── boats/[id]/
+│       │   ├── login/
+│       │   ├── register/
+│       │   └── become-owner/   # Self-serve RENTER → OWNER upgrade
+│       ├── (authenticated)/
+│       │   └── owner/          # Owner space (OWNER/ADMIN gated in layout)
+│       │       ├── page.tsx    # Dashboard
+│       │       ├── boats/
+│       │       ├── calendar/
+│       │       ├── documents/
+│       │       └── profile/
 │       └── (admin)/            # Admin-only routes (empty)
 ├── components/
-│   ├── ui/                     # shadcn primitives (button, sonner, sheet, slider, pagination)
+│   ├── ui/                     # shadcn primitives
+│   ├── auth/
 │   ├── boats/
-│   │   └── boat-card.tsx       # Reusable boat card with badges, motorization, skipper icons
+│   ├── brand/
 │   ├── landing/
-│   │   ├── Landing_page.tsx    # Landing page (hero + featured boats)
-│   │   └── hero-search-bar.tsx # Hero form (TanStack Form + Zod); accepts defaultValues prop
 │   ├── layout/
-│   │   ├── site-header.tsx     # Server Component; links to /search
-│   │   └── site-footer.tsx
+│   ├── owner/                  # Owner shell, dashboard, forms, calendar, documents
 │   └── search/
-│       ├── search-page-client.tsx  # "use client" orchestrator for the search page
-│       ├── search-summary-bar.tsx  # Compact filter pill + "Modifier" sheet trigger
-│       ├── search-breadcrumbs.tsx  # Breadcrumbs for the search page
-│       ├── search-filters.tsx      # Sidebar filters (TanStack Form + Zod)
-│       └── search-results.tsx      # Grid of BoatCards, sort dropdown, pagination
 ├── constants/                  # Shared constants (e.g. TanstackQuery.ts)
 ├── contexts/                   # TanstackQueryClient, ThemeProvider
 ├── hooks/                      # Domain React Query hooks + useSupabaseRealtime
-│   ├── useSupabaseRealtime.ts  # Shared realtime + cache invalidation primitive
-│   ├── useCurrentUser.ts       # Current user domain hook
-│   ├── useCurrentUserRole.ts   # Current user role domain hook
-│   └── useBoats.ts             # Boat search hook; subscribes to boats, availability, reservations
-├── queries/                    # Pure async queryFn functions (no React hooks)
-│   ├── fetchCurrentUser.ts     # Authenticated user profile
-│   ├── fetchCurrentUserRole.ts # Current user role
-│   └── fetchBoats.ts           # Calls search_available_boats + get_boat_filter_bounds RPCs
+│   ├── useSupabaseRealtime.ts
+│   ├── useCurrentUser.ts
+│   ├── useCurrentUserRole.ts
+│   ├── useBoats.ts
+│   ├── useOwnerBoats.ts
+│   ├── useOwnerDocuments.ts
+│   ├── useBoatAvailabilitySlots.ts
+│   ├── usePorts.ts
+│   └── useOwnerMutations.ts    # create/update/publish boat, slots, documents, upgrade-to-owner
+├── queries/
+│   ├── fetchCurrentUser.ts
+│   ├── fetchCurrentUserRole.ts
+│   ├── fetchBoats.ts
+│   ├── fetchOwnerBoats.ts
+│   ├── fetchOwnerDocuments.ts
+│   ├── fetchBoatAvailabilitySlots.ts
+│   └── fetchPorts.ts
 ├── i18n/                       # routing, request, navigation
 ├── lib/
 │   ├── utils.ts                # cn() helper
@@ -105,7 +115,7 @@ messages/                       # en.json, fr.json (project root)
 supabase/
 ├── config.toml                 # Local + storage + per-function edge config
 ├── migrations/                 # SQL migrations
-├── seeds/                      # Modular local fixtures (01-04, glob-loaded; not for production)
+├── seeds/                      # Modular local fixtures (01-05, glob-loaded; not for production)
 └── functions/                  # Edge functions (not yet scaffolded)
     └── <function-name>/
         ├── index.ts            # Function entrypoint
@@ -284,6 +294,10 @@ Auth-driven cache updates are **not** handled inside `useSupabaseRealtime`. When
 | `useCurrentUser` | `src/hooks/useCurrentUser.ts` | `["current-user"]` |
 | `useCurrentUserRole` | `src/hooks/useCurrentUserRole.ts` | `["current-user-role"]` |
 | `useBoats(filters)` | `src/hooks/useBoats.ts` | `["boats", "list", filters]` |
+| `useOwnerBoats` | `src/hooks/useOwnerBoats.ts` | `["owner-boats"]` |
+| `useOwnerDocuments` | `src/hooks/useOwnerDocuments.ts` | `["owner-documents"]` |
+| `useOwnerAvailabilitySlots` / `useBoatAvailabilitySlots` | `src/hooks/useBoatAvailabilitySlots.ts` | `["owner-availability"]` / `["boat-availability", boatId]` |
+| `usePorts` | `src/hooks/usePorts.ts` | `["ports"]` |
 
 **Implemented query functions:**
 
@@ -293,6 +307,10 @@ Auth-driven cache updates are **not** handled inside `useSupabaseRealtime`. When
 | `fetchCurrentUserRole` | `src/queries/fetchCurrentUserRole.ts` | Current user role |
 | `fetchBoats(filters)` | `src/queries/fetchBoats.ts` | Calls `search_available_boats` RPC; returns `PaginatedBoats` |
 | `fetchBoatFilterBounds(port)` | `src/queries/fetchBoats.ts` | Calls `get_boat_filter_bounds` RPC for slider bounds |
+| `fetchOwnerBoats` / `fetchOwnerBoatById` | `src/queries/fetchOwnerBoats.ts` | Owner fleet (+ port join) |
+| `fetchOwnerDocuments` | `src/queries/fetchOwnerDocuments.ts` | Owner contractual documents |
+| `fetchBoatAvailabilitySlots` / `fetchOwnerAvailabilitySlots` | `src/queries/fetchBoatAvailabilitySlots.ts` | Availability windows |
+| `fetchPorts` | `src/queries/fetchPorts.ts` | Port options for forms |
 
 ### Edge functions
 
@@ -347,29 +365,29 @@ verify_jwt = true
 
 | Table | Description | RLS |
 | ----- | ----------- | --- |
-| `public.users` | Profile linked to `auth.users` | Users can view/update own row |
-| `public.user_roles` | Role enum: `VISITOR`, `RENTER`, `OWNER`, `ADMINISTRATOR` | Users can view own role |
+| `public.users` | Profile linked to `auth.users` | Users can view/update own row (`GRANT` select/update to `authenticated`) |
+| `public.user_roles` | Role enum: `VISITOR`, `RENTER`, `OWNER`, `ADMINISTRATOR` | Users can view own role (`GRANT` select to `authenticated`) |
 | `public.ports` | Rental ports (name, country) | Public SELECT |
-| `public.boats` | Boats listed for rental | Public SELECT |
+| `public.boats` | Boats listed for rental (`is_published` default false for new rows) | Public SELECT published + own; owner INSERT/UPDATE/DELETE |
 | `public.boat_reviews` | Reviews left by renters on boats (`reviewer_id` links to `users`) | Public SELECT |
-| `public.boat_availability_time_slots` | Date windows when a boat is available | Public SELECT |
+| `public.boat_availability_time_slots` | Date windows when a boat is available | Public SELECT; owner write |
 | `public.boat_reservations` | Bookings with `status`; active ones block availability | Public SELECT |
 | `public.boat_equipment_links` | Junction: boat ↔ `boat_equipment` enum | Public SELECT |
 | `public.payment_transactions` | Stripe payment records per reservation | Renter/owner/admin SELECT; writes service-role only |
 | `public.boat_media` | Public gallery images (`boat-images` bucket) | Public SELECT; owner/admin write |
-| `public.boat_documents` | Private owner documents (`boat-documents` bucket) | Owner/admin only (no public) |
+| `public.boat_documents` | Contractual docs (`boat-documents` bucket). `LICENSE`/`SAILOR_CV` are owner-level (`boat_id` null); `INSURANCE` is boat-scoped | Owner/admin only |
 
-Column additions: `boats.is_published` / `published_at` (moderation), `ports.slug` (unique, kebab-case), `boat_reservations.status` / `total_amount` / `currency`.
+Column additions: `boats.is_published` / `published_at` (publish gated by required documents), `ports.slug` (unique, kebab-case), `boat_reservations.status` / `total_amount` / `currency`.
 
-**Enums:** `boat_type` (`SAILBOAT`, `MOTORBOAT`, `CATAMARAN`, `YACHT`), `boat_skipper_option` (`INCLUDED`, `OPTIONAL`, `NONE`), `boat_equipment` (`GPS`, `SLEEPING_BERTHS`, `EQUIPPED_KITCHEN`), `reservation_status` (`PENDING`, `CONFIRMED`, `CANCELLED`, `COMPLETED`), `boat_document_type` (`INSURANCE`, `REGISTRATION`, `LICENSE`, `OTHER`).
+**Enums:** `boat_type` (`SAILBOAT`, `MOTORBOAT`, `CATAMARAN`, `YACHT`), `boat_skipper_option` (`INCLUDED`, `OPTIONAL`, `NONE`), `boat_equipment` (`GPS`, `SLEEPING_BERTHS`, `EQUIPPED_KITCHEN`), `reservation_status` (`PENDING`, `CONFIRMED`, `CANCELLED`, `COMPLETED`), `boat_document_type` (`INSURANCE`, `REGISTRATION`, `LICENSE`, `OTHER`, `SAILOR_CV`).
 
-**RPCs:** `search_available_boats(...)` — paginated boat search with availability/date filtering (only `is_published` boats; blocks on `PENDING`/`CONFIRMED` reservations); `get_boat_filter_bounds(p_port_name)` — returns min/max price and length for sidebar sliders.
+**RPCs:** `search_available_boats(...)` — paginated boat search with availability/date filtering (only `is_published` boats; blocks on `PENDING`/`CONFIRMED` reservations); `get_boat_filter_bounds(p_port_name)` — returns min/max price and length for sidebar sliders; `upgrade_current_user_to_owner()` — promotes authenticated `RENTER` → `OWNER` (email+phone already enforced by role trigger).
 
-**Constraints:** `boat_reservations_no_overlap` — `btree_gist` exclusion constraint preventing overlapping active (`PENDING`/`CONFIRMED`) reservations on the same boat.
+**Constraints:** `boat_reservations_no_overlap` — `btree_gist` exclusion constraint preventing overlapping active (`PENDING`/`CONFIRMED`) reservations on the same boat. Unique partial indexes: one `LICENSE` and one `SAILOR_CV` per owner; one `INSURANCE` per boat.
 
-Triggers: timestamp enforcement, role requirements (email + phone for elevated roles), auto-provision on auth signup/update, `recompute_boat_rating` (keeps `boats.rating` = average of its reviews).
+Triggers: timestamp enforcement, role requirements (email + phone for elevated roles), auto-provision on auth signup/update, `recompute_boat_rating` (keeps `boats.rating` = average of its reviews), `enforce_boat_document_owner` (document scoping rules), `enforce_boat_publish_requirements` (blocks `is_published → true` without LICENSE + SAILOR_CV + boat INSURANCE).
 
-**`private` schema:** houses `SECURITY DEFINER` helpers kept out of the API-exposed `public` schema. `private.is_administrator()` (checks the caller's `ADMINISTRATOR` role) backs the admin RLS policies.
+**`private` schema:** houses `SECURITY DEFINER` helpers kept out of the API-exposed `public` schema. Helpers: `private.is_administrator()`, `private.current_public_user_id()`, `private.is_boat_owner(boat_id)`.
 
 After any migration, regenerate types:
 
@@ -384,10 +402,11 @@ npx supabase gen types typescript --schema public > src/lib/supabase/database.ty
 Use the modular files in `[supabase/seeds/](supabase/seeds/)` for **local testing only** — fixture users, sample boats, bookings, etc. Do **not** put seed data in migrations.
 
 - Loaded via `[supabase/config.toml](supabase/config.toml)` `[db.seed]` glob (`sql_paths = ["./seeds/*.sql"]`, `enabled = true`). Files run **alphabetically**, hence the numeric prefixes:
-  - `01_reference_ports.sql` — ports (fixed UUIDs + slugs)
+  - `01_reference_ports.sql` — ports (fixed UUIDs + slugs; includes Brest)
   - `02_demo_auth_users.sql` — `auth.users` + `auth.identities` + profiles + roles
-  - `03_demo_boats.sql` — boats, equipment, reviews (`reviewer_id` linked), media
+  - `03_demo_boats.sql` — boats (incl. one draft `Horizon`), equipment, reviews, media
   - `04_demo_availability.sql` — availability slots + reservations (mixed statuses)
+  - `05_demo_documents.sql` — owner LICENSE/SAILOR_CV + boat INSURANCE metadata (Horizon has no insurance)
 - No orchestrator file: psql meta-commands (`\i`, `\ir`) are not supported by the CLI seed runner. Do not add an aggregator; the glob handles ordering.
 - Seeds are **idempotent** (fixed UUIDs + `ON CONFLICT DO NOTHING`) and use **relative dates** (`current_date + ...`) so they stay valid over time.
 - `auth.identities` rows (provider `email`) are required for reliable local password login.
@@ -412,7 +431,7 @@ npx supabase db reset
 | `[edge_runtime]`                    | Edge runtime settings (enabled, `deno_version = 2`) |
 
 
-Storage is enabled with two buckets: `boat-images` (public, gallery photos) and `boat-documents` (private, owner documents). Buckets are created in **SQL** (migration `20260709160100`) so they survive `db reset` and apply on `db push`; the `[storage.buckets.*]` blocks in `config.toml` only mirror local file-size / MIME limits. `storage.objects` RLS policies live in the same migration (public read for images, owner/admin write; owner/admin-only for documents, keyed on the `{boat_id}/...` path prefix). No `[functions.*]` blocks exist yet.
+Storage is enabled with two buckets: `boat-images` (public, gallery photos) and `boat-documents` (private, owner documents). Buckets are created in **SQL** (migration `20260709160100`) so they survive `db reset` and apply on `db push`; the `[storage.buckets.*]` blocks in `config.toml` only mirror local file-size / MIME limits. Path conventions: `boat-images/{boat_id}/...`, `boat-documents/{boat_id}/...` (boat-scoped), and `boat-documents/owners/{auth_id}/...` (owner-level LICENSE/SAILOR_CV). No `[functions.*]` blocks exist yet.
 
 ### UI components
 
@@ -456,7 +475,7 @@ Obtain local values via `npx supabase status` after `npx supabase start`.
 6. Copy env vars from `npx supabase status` into `.env`
 7. `npm run dev`
 
-**Local testing with seed data:** populate `[supabase/seed.sql](supabase/seed.sql)` with fixtures, then run `npx supabase db reset` to apply migrations and seed in one step. Use this to get a repeatable local dataset for development and manual testing.
+**Local testing with seed data:** update files under `[supabase/seeds/](supabase/seeds/)`, then run `npx supabase db reset` to apply migrations and seed in one step. Use this to get a repeatable local dataset for development and manual testing. Demo owner login: `marc.thevenot@example.com` / `Sailing2026!`.
 
 ---
 
@@ -468,13 +487,11 @@ Do **not** assume these exist. Build them when needed, following the conventions
 | Gap                   | Location / notes                                                                                        |
 | --------------------- | ------------------------------------------------------------------------------------------------------- |
 | No edge functions     | `supabase/functions/` does not exist; no per-function `deno.json`; no `[functions.*]` in `config.toml` |
-| Empty route groups    | `(authenticated)` and `(admin)` have no pages                                                           |
-| No auth UI            | `/login` and `/register` pages not yet implemented                                                      |
+| Empty admin routes    | `(admin)` has no pages yet                                                                              |
 | No booking flow       | `boat_reservations` has `status` + no-overlap constraint (Public SELECT only); no CREATE policy or booking UI yet (build via edge function) |
-| No boat detail page   | `/boats/[id]` route stub exists but has no content                                                      |
 | No boat image uploads | `boat-images` bucket + `boat_media` table exist and are seeded with placeholder paths; no upload UI and no actual files uploaded yet |
 | No payment processing | `payment_transactions` table exists (service-role writes only); no Stripe edge function yet             |
-| No owner dashboard    | Owners cannot manage availability, equipment, boats, media, or documents from the app yet               |
+| No owner reservations page | Dashboard reservation/revenue/occupancy stats are placeholders until booking flow lands            |
 
 
 ---
