@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import createSupabaseBrowserClient from "@/lib/supabase/createSupabaseBrowserClient";
 import { MY_RESERVATIONS_QUERY_KEY } from "@/hooks/useBoatReservations";
+import { MY_REVIEWS_QUERY_KEY } from "@/hooks/useMyReviews";
 
 type CreateBoatReviewInput = {
   boatId: string;
@@ -49,6 +50,9 @@ export function useCreateBoatReview() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: MY_RESERVATIONS_QUERY_KEY,
+      });
+      await queryClient.invalidateQueries({
+        queryKey: MY_REVIEWS_QUERY_KEY,
       });
       await queryClient.invalidateQueries({ queryKey: ["boats"] });
     },

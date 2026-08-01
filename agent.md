@@ -26,6 +26,7 @@ For product requirements, see [documentation/](documentation/).
 - **Auth UI** (`/login`, `/register`) with email/password and Google OAuth callback.
 - **Owner space** (`/owner/*`): dashboard, boat CRUD, availability calendar, contractual documents upload, draft→published gating; self-serve `/become-owner` (RENTER→OWNER).
 - **Renter booking flow**: Stripe Checkout (test mode) via edge functions, booking history (`/bookings`), post-rental reviews tied to completed reservations, 10% platform commission recorded in DB.
+- **Account profile** (`/profile`): edit name/phone; past (COMPLETED) reservations with linked review; list of comments and ratings left by the user (role not shown).
 - Supabase clients, i18n, theme, TanStack Query provider, `useSupabaseRealtime`, domain hooks for users/boats/owner/booking data.
 
 Admin UI is **not yet implemented**.
@@ -70,6 +71,7 @@ src/
 │       │   └── become-owner/   # Self-serve RENTER → OWNER upgrade
 │       ├── (authenticated)/
 │       │   ├── bookings/       # Renter booking history + post-rental reviews
+│       │   ├── profile/        # Account profile (view/edit name + phone)
 │       │   └── owner/          # Owner space (OWNER/ADMIN gated in layout)
 │       │       ├── page.tsx    # Dashboard
 │       │       ├── boats/
@@ -82,6 +84,7 @@ src/
 │   ├── auth/
 │   ├── boats/
 │   ├── bookings/               # Bookings list + leave-review dialog
+│   ├── profile/                # Authenticated profile page + reservation chat dialog
 │   ├── brand/
 │   ├── landing/
 │   ├── layout/
@@ -100,6 +103,8 @@ src/
 │   ├── useBoatReservations.ts  # Active boat reservations + my bookings
 │   ├── useBookingMutations.ts  # create-booking-checkout invoke
 │   ├── useReviewMutations.ts   # Post-rental review insert
+│   ├── useMyReviews.ts         # Reviews written by current user
+│   ├── useProfileMutations.ts  # Update current user profile
 │   ├── usePorts.ts
 │   └── useOwnerMutations.ts    # create/update/publish boat, slots, documents, upgrade-to-owner
 ├── queries/
@@ -211,7 +216,7 @@ Route groups do **not** appear in URLs. Every page must be registered explicitly
 
 **Current public routes:** `/`, `/login`, `/register`, `/search`, `/boats`, `/become-owner`.
 
-**Current authenticated routes:** `/owner`, `/bookings`.
+**Current authenticated routes:** `/owner`, `/bookings`, `/profile`.
 
 **Default deny:** paths not listed in any array redirect to `/{locale}` (home). When adding a page under `(public)`, `(authenticated)`, or `(admin)`, add its locale-stripped path (e.g. `/dashboard`, `/login`) to the matching array in the same change.
 
@@ -312,6 +317,7 @@ Auth-driven cache updates are **not** handled inside `useSupabaseRealtime`. When
 | `usePorts` | `src/hooks/usePorts.ts` | `["ports"]` |
 | `useBoatActiveReservations(boatId)` | `src/hooks/useBoatReservations.ts` | `["bookings", "boat", boatId]` |
 | `useMyReservations` | `src/hooks/useBoatReservations.ts` | `["bookings", "mine"]` |
+| `useReservationMessages(reservationId)` | `src/hooks/useReservationMessages.ts` | `["reservation-messages", reservationId]` |
 
 **Implemented query functions:**
 
@@ -325,6 +331,7 @@ Auth-driven cache updates are **not** handled inside `useSupabaseRealtime`. When
 | `fetchOwnerDocuments` | `src/queries/fetchOwnerDocuments.ts` | Owner contractual documents |
 | `fetchBoatAvailabilitySlots` / `fetchOwnerAvailabilitySlots` | `src/queries/fetchBoatAvailabilitySlots.ts` | Availability windows |
 | `fetchBoatActiveReservations` / `fetchMyReservations` | `src/queries/fetchBoatReservations.ts` | Active boat bookings / renter history |
+| `fetchReservationMessages` | `src/queries/fetchReservationMessages.ts` | Chat messages for one reservation |
 | `fetchPorts` | `src/queries/fetchPorts.ts` | Port options for forms |
 
 **Implemented mutation hooks (non-Realtime):**
@@ -333,6 +340,9 @@ Auth-driven cache updates are **not** handled inside `useSupabaseRealtime`. When
 | ---- | ---- | ------- |
 | `useCreateBookingCheckout` | `src/hooks/useBookingMutations.ts` | Invokes `create-booking-checkout` edge function |
 | `useCreateBoatReview` | `src/hooks/useReviewMutations.ts` | Inserts review for a COMPLETED reservation |
+| `useUpdateCurrentUser` | `src/hooks/useProfileMutations.ts` | Updates own `users` profile (name, phone) |
+| `useSendReservationMessage` | `src/hooks/useReservationMessages.ts` | Inserts a chat message on a reservation |
+| `useMyReviews` | `src/hooks/useMyReviews.ts` | Reviews written by the current user |
 | `useOwnerMutations` (multiple) | `src/hooks/useOwnerMutations.ts` | Boat CRUD, slots, documents, upgrade-to-owner |
 
 ### Edge functions
@@ -415,6 +425,7 @@ Local secrets for edge functions live in `supabase/functions/.env` (gitignored).
 | `public.payment_transactions` | Stripe payment records per reservation (`commission_amount`, `owner_amount`) | Renter/owner/admin SELECT; writes service-role only |
 | `public.boat_media` | Public gallery images (`boat-images` bucket) | Public SELECT; owner/admin write |
 | `public.boat_documents` | Contractual docs (`boat-documents` bucket). `LICENSE`/`SAILOR_CV` are owner-level (`boat_id` null); `INSURANCE` is boat-scoped | Owner/admin only |
+| `public.reservation_messages` | Renter ↔ owner chat scoped to a reservation. In the `supabase_realtime` publication (the publication is otherwise empty, so other tables emit no `postgres_changes` events) | Participants (renter, boat owner, admin) SELECT/INSERT via `private.is_reservation_participant` |
 
 Column additions: `boats.is_published` / `published_at` (publish gated by required documents), `ports.slug` (unique, kebab-case), `boat_reservations.status` / `total_amount` / `currency`, `payment_transactions.commission_amount` / `owner_amount`, `boat_reviews.reservation_id`.
 
@@ -426,7 +437,7 @@ Column additions: `boats.is_published` / `published_at` (publish gated by requir
 
 Triggers: timestamp enforcement, role requirements (email + phone for elevated roles), auto-provision on auth signup/update, `recompute_boat_rating` (keeps `boats.rating` = average of its reviews), `enforce_boat_document_owner` (document scoping rules), `enforce_boat_publish_requirements` (blocks `is_published → true` without LICENSE + SAILOR_CV + boat INSURANCE).
 
-**`private` schema:** houses `SECURITY DEFINER` helpers kept out of the API-exposed `public` schema. Helpers: `private.is_administrator()`, `private.current_public_user_id()`, `private.is_boat_owner(boat_id)`, `private.complete_finished_reservations()` (CONFIRMED→COMPLETED when `end_date` passed; stale PENDING→CANCELLED after 24h). Scheduled daily via `pg_cron` job `complete-finished-reservations`.
+**`private` schema:** houses `SECURITY DEFINER` helpers kept out of the API-exposed `public` schema. Helpers: `private.is_administrator()`, `private.current_public_user_id()`, `private.is_boat_owner(boat_id)`, `private.is_reservation_participant(reservation_id)` (renter, boat owner, or admin), `private.complete_finished_reservations()` (CONFIRMED→COMPLETED when `end_date` passed; stale PENDING→CANCELLED after 24h). Scheduled daily via `pg_cron` job `complete-finished-reservations`.
 
 **Service role grants:** `service_role` has `SELECT/INSERT/UPDATE/DELETE` on all `public` tables (required by booking edge functions). Without these grants, Checkout fails with `permission denied for table users`.
 
@@ -449,6 +460,7 @@ Use the modular files in `[supabase/seeds/](supabase/seeds/)` for **local testin
   - `04_demo_availability.sql` — availability slots + reservations (mixed statuses)
   - `05_demo_documents.sql` — owner LICENSE/SAILOR_CV + boat INSURANCE metadata (Horizon has no insurance)
   - `06_demo_reservations.sql` — `payment_transactions` with commission split for seeded reservations
+  - `07_demo_messages.sql` — chat messages between Léa and the owner on her upcoming reservation
 - No orchestrator file: psql meta-commands (`\i`, `\ir`) are not supported by the CLI seed runner. Do not add an aggregator; the glob handles ordering.
 - Seeds are **idempotent** (fixed UUIDs + `ON CONFLICT DO NOTHING`) and use **relative dates** (`current_date + ...`) so they stay valid over time.
 - `auth.identities` rows (provider `email`) are required for reliable local password login.

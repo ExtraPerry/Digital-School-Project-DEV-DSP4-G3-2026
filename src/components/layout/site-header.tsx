@@ -49,12 +49,15 @@ export async function SiteHeader() {
           >
             {t("nav_search_boat")}
           </Link>
-          <Link
-            className="text-white/90 transition-colors hover:text-white"
-            href={isOwner ? "/owner" : "/become-owner"}
-          >
-            {isOwner ? t("nav_owner_space") : t("nav_become_owner")}
-          </Link>
+          {/* Owners already get the coral "Owner space" button on the right. */}
+          {!isOwner ? (
+            <Link
+              className="text-white/90 transition-colors hover:text-white"
+              href="/become-owner"
+            >
+              {t("nav_become_owner")}
+            </Link>
+          ) : null}
           <Link
             className="text-white/90 transition-colors hover:text-white"
             href="#"

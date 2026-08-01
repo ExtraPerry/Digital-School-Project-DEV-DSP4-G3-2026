@@ -11,7 +11,7 @@ const PUBLIC_ROUTES = [
   "/boats",
   "/become-owner",
 ] as const;
-const AUTHENTICATED_ROUTES = ["/owner", "/bookings"] as const; // e.g. "/dashboard", "/profile", "/bookings"
+const AUTHENTICATED_ROUTES = ["/owner", "/bookings", "/profile"] as const;
 const ADMIN_ROUTES = [] as const; // e.g. "/admin"
 
 const intlMiddleware = createMiddleware(routing);

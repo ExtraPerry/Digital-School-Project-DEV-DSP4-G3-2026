@@ -20,7 +20,10 @@ export type BoatReservationWithDetails = BoatReservation & {
     status: string;
   } | null;
   // Unique reservation_id → PostgREST may return object or array depending on embed detection.
-  boat_reviews: { id: string } | { id: string }[] | null;
+  boat_reviews:
+    | { id: string; rating: number; comment: string; created_at: string }
+    | { id: string; rating: number; comment: string; created_at: string }[]
+    | null;
 };
 
 export function reservationHasReview(
@@ -35,6 +38,20 @@ export function reservationHasReview(
   }
 
   return Boolean(reviews.id);
+}
+
+export function getReservationReview(
+  reviews: BoatReservationWithDetails["boat_reviews"],
+): { id: string; rating: number; comment: string; created_at: string } | null {
+  if (!reviews) {
+    return null;
+  }
+
+  if (Array.isArray(reviews)) {
+    return reviews[0] ?? null;
+  }
+
+  return reviews;
 }
 
 export async function fetchBoatActiveReservations(
@@ -105,7 +122,12 @@ export async function fetchMyReservations(): Promise<
         owner_amount,
         status
       ),
-      boat_reviews ( id )
+      boat_reviews (
+        id,
+        rating,
+        comment,
+        created_at
+      )
     `,
     )
     .eq("renter_id", profile.id)

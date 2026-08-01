@@ -432,6 +432,48 @@ export type Database = {
         }
         Relationships: []
       }
+      reservation_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          reservation_id: string
+          sender_id: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          reservation_id: string
+          sender_id: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          reservation_id?: string
+          sender_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservation_messages_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "boat_reservations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservation_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           auth_id: string
