@@ -58,9 +58,16 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
-  const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const supabaseUrl =
+    Deno.env.get("SUPABASE_URL") ?? Deno.env.get("API_URL");
+  const supabaseAnonKey =
+    Deno.env.get("SUPABASE_ANON_KEY") ??
+    Deno.env.get("ANON_KEY") ??
+    Deno.env.get("PUBLISHABLE_KEY");
+  const supabaseServiceRoleKey =
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
+    Deno.env.get("SERVICE_ROLE_KEY") ??
+    Deno.env.get("SECRET_KEY");
   const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY");
   const siteUrl = Deno.env.get("SITE_URL") ?? "http://localhost:3000";
 
@@ -68,15 +75,24 @@ Deno.serve(async (request) => {
     !supabaseUrl ||
     !supabaseAnonKey ||
     !supabaseServiceRoleKey ||
-    !stripeSecretKey
+    !stripeSecretKey ||
+    stripeSecretKey.startsWith("sk_test_xxx")
   ) {
-    return jsonResponse({ error: "Server misconfigured" }, 500);
+    return jsonResponse(
+      {
+        error:
+          "Server misconfigured: set a real STRIPE_SECRET_KEY (test mode) in supabase/functions/.env and run `npx supabase functions serve --env-file supabase/functions/.env`",
+      },
+      500,
+    );
   }
 
   const authorizationHeader = request.headers.get("Authorization");
-  if (!authorizationHeader) {
+  if (!authorizationHeader?.startsWith("Bearer ")) {
     return jsonResponse({ error: "Missing authorization" }, 401);
   }
+
+  const accessToken = authorizationHeader.slice("Bearer ".length);
 
   let body: CheckoutRequestBody;
   try {
@@ -112,26 +128,62 @@ Deno.serve(async (request) => {
 
   const userClient = createClient(supabaseUrl, supabaseAnonKey, {
     global: { headers: { Authorization: authorizationHeader } },
+    auth: { persistSession: false, autoRefreshToken: false },
   });
-  const adminClient = createClient(supabaseUrl, supabaseServiceRoleKey);
+  const adminClient = createClient(supabaseUrl, supabaseServiceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
 
   const {
     data: { user },
     error: userError,
-  } = await userClient.auth.getUser();
+  } = await userClient.auth.getUser(accessToken);
 
   if (userError || !user) {
-    return jsonResponse({ error: "Unauthorized" }, 401);
+    return jsonResponse(
+      { error: userError?.message ?? "Unauthorized" },
+      401,
+    );
   }
 
-  const { data: profile, error: profileError } = await adminClient
+  const { data: ownProfile, error: ownProfileError } = await userClient
     .from("users")
     .select("id, first_name, last_name, email")
     .eq("auth_id", user.id)
     .maybeSingle();
 
-  if (profileError || !profile) {
-    return jsonResponse({ error: "User profile not found" }, 400);
+  let renterProfile = ownProfile;
+
+  if (!renterProfile) {
+    const { data: adminProfile, error: profileError } = await adminClient
+      .from("users")
+      .select("id, first_name, last_name, email")
+      .eq("auth_id", user.id)
+      .maybeSingle();
+
+    if (profileError) {
+      return jsonResponse(
+        {
+          error: `User profile lookup failed: ${
+            ownProfileError?.message ?? profileError.message
+          }`,
+        },
+        400,
+      );
+    }
+
+    renterProfile = adminProfile;
+  }
+
+  if (!renterProfile) {
+    return jsonResponse(
+      {
+        error: `User profile not found for auth_id ${user.id}${
+          ownProfileError ? `: ${ownProfileError.message}` : ""
+        }`,
+      },
+      400,
+    );
   }
 
   const { data: boat, error: boatError } = await adminClient
@@ -169,7 +221,7 @@ Deno.serve(async (request) => {
   const { data: reservation, error: reservationError } = await adminClient
     .from("boat_reservations")
     .insert({
-      renter_id: profile.id,
+      renter_id: renterProfile.id,
       boat_id: boatId,
       start_date: startDateValue,
       end_date: endDateValue,
@@ -207,7 +259,7 @@ Deno.serve(async (request) => {
   try {
     checkoutSession = await stripe.checkout.sessions.create({
       mode: "payment",
-      customer_email: profile.email ?? user.email ?? undefined,
+      customer_email: renterProfile.email ?? user.email ?? undefined,
       success_url: `${siteUrl}/${locale}/bookings?checkout=success`,
       cancel_url: `${siteUrl}/${locale}/bookings?checkout=cancelled`,
       line_items: [
@@ -237,7 +289,7 @@ Deno.serve(async (request) => {
       metadata: {
         reservation_id: reservation.id,
         boat_id: boatId,
-        renter_id: profile.id,
+        renter_id: renterProfile.id,
       },
     });
   } catch (stripeError) {

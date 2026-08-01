@@ -1,6 +1,8 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
 import { BookingsPageContent } from "@/components/bookings/bookings-page-content";
+import { SiteHeader } from "@/components/layout/site-header";
+import { SiteFooter } from "@/components/layout/site-footer";
 
 export async function generateMetadata({
   params,
@@ -28,8 +30,12 @@ export default async function BookingsPage({
   setRequestLocale(locale);
 
   return (
-    <Suspense fallback={null}>
-      <BookingsPageContent />
-    </Suspense>
+    <div className="min-h-screen bg-[#f7f8fa] text-neutral-800">
+      <SiteHeader />
+      <Suspense fallback={null}>
+        <BookingsPageContent />
+      </Suspense>
+      <SiteFooter />
+    </div>
   );
 }

@@ -149,7 +149,9 @@ export function BookingCalendar({
         error instanceof Error ? error.message : t("booking_error_generic");
       const isUnavailable = message.toLowerCase().includes("unavailable");
       toast.error(
-        isUnavailable ? t("booking_error_unavailable") : t("booking_error_generic"),
+        isUnavailable
+          ? t("booking_error_unavailable")
+          : message || t("booking_error_generic"),
       );
     }
   }

@@ -428,6 +428,8 @@ Triggers: timestamp enforcement, role requirements (email + phone for elevated r
 
 **`private` schema:** houses `SECURITY DEFINER` helpers kept out of the API-exposed `public` schema. Helpers: `private.is_administrator()`, `private.current_public_user_id()`, `private.is_boat_owner(boat_id)`, `private.complete_finished_reservations()` (CONFIRMED→COMPLETED when `end_date` passed; stale PENDING→CANCELLED after 24h). Scheduled daily via `pg_cron` job `complete-finished-reservations`.
 
+**Service role grants:** `service_role` has `SELECT/INSERT/UPDATE/DELETE` on all `public` tables (required by booking edge functions). Without these grants, Checkout fails with `permission denied for table users`.
+
 After any migration, regenerate types:
 
 ```bash

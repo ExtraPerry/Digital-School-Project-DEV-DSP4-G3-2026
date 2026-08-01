@@ -18,6 +18,36 @@ type CreateBookingCheckoutResponse = {
   error?: string;
 };
 
+async function readFunctionsErrorMessage(
+  error: unknown,
+  data: CreateBookingCheckoutResponse | null,
+): Promise<string> {
+  if (typeof data?.error === "string" && data.error.length > 0) {
+    return data.error;
+  }
+
+  const context = (error as { context?: Response } | null)?.context;
+  if (context && typeof context.json === "function") {
+    try {
+      const body = (await context.json()) as { error?: string; message?: string };
+      if (typeof body.error === "string" && body.error.length > 0) {
+        return body.error;
+      }
+      if (typeof body.message === "string" && body.message.length > 0) {
+        return body.message;
+      }
+    } catch {
+      // ignore JSON parse failures
+    }
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return "Unable to start checkout";
+}
+
 export function useCreateBookingCheckout() {
   const queryClient = useQueryClient();
 
@@ -42,9 +72,7 @@ export function useCreateBookingCheckout() {
       });
 
       if (error) {
-        const responseError =
-          typeof data?.error === "string" ? data.error : null;
-        throw new Error(responseError ?? error.message);
+        throw new Error(await readFunctionsErrorMessage(error, data));
       }
 
       if (!data?.checkout_url) {
