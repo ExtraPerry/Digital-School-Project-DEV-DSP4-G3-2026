@@ -10,6 +10,10 @@ const PUBLIC_ROUTES = [
   "/search",
   "/boats",
   "/become-owner",
+  "/legal",
+  "/terms",
+  "/privacy",
+  "/cookies",
 ] as const;
 const AUTHENTICATED_ROUTES = ["/owner", "/bookings", "/profile"] as const;
 const ADMIN_ROUTES = [] as const; // e.g. "/admin"

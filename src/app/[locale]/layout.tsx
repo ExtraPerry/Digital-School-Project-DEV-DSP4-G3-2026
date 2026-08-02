@@ -1,5 +1,6 @@
 import { Figtree } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
+import { CookieConsentBanner } from "@/components/legal/cookie-consent-banner";
 import "../globals.css";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
@@ -66,6 +67,7 @@ export default async function LocaleLayout({
               disableTransitionOnChange
             >
               {children}
+              <CookieConsentBanner />
               <Toaster position="bottom-right" />
             </ThemeProvider>
           </NextIntlClientProvider>

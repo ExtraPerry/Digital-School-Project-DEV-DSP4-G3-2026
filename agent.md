@@ -68,7 +68,11 @@ src/
 │       │   ├── boats/[id]/
 │       │   ├── login/
 │       │   ├── register/
-│       │   └── become-owner/   # Self-serve RENTER → OWNER upgrade
+│       │   ├── become-owner/   # Self-serve RENTER → OWNER upgrade
+│       │   ├── legal/          # Legal notice / Mentions légales
+│       │   ├── terms/          # Terms of use and sale / CGU-CGV
+│       │   ├── privacy/        # Privacy policy (GDPR) / RGPD
+│       │   └── cookies/        # Cookie policy / Politique de cookies
 │       ├── (authenticated)/
 │       │   ├── bookings/       # Renter booking history + post-rental reviews
 │       │   ├── profile/        # Account profile (view/edit name + phone)
@@ -88,6 +92,7 @@ src/
 │   ├── brand/
 │   ├── landing/
 │   ├── layout/
+│   ├── legal/                  # Legal document renderer + cookie consent banner
 │   ├── owner/                  # Owner shell, dashboard, forms, calendar, documents
 │   └── search/
 ├── constants/                  # Shared constants (e.g. TanstackQuery.ts)
@@ -214,7 +219,7 @@ Route groups do **not** appear in URLs. Every page must be registered explicitly
 | `ADMIN_ROUTES`         | Logged-in user with `ADMINISTRATOR` role in `public.user_roles` |
 
 
-**Current public routes:** `/`, `/login`, `/register`, `/search`, `/boats`, `/become-owner`.
+**Current public routes:** `/`, `/login`, `/register`, `/search`, `/boats`, `/become-owner`, `/legal`, `/terms`, `/privacy`, `/cookies`.
 
 **Current authenticated routes:** `/owner`, `/bookings`, `/profile`.
 

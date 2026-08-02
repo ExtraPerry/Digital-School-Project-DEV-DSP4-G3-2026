@@ -86,6 +86,7 @@
       "footer_legal": "Legal notice",
       "footer_terms": "Terms",
       "footer_privacy": "GDPR",
+      "footer_cookies": "Cookies",
       "footer_disclaimer": "Fictional student project: no real purchase or booking can be made"
     },
     "BoatPage": {
@@ -415,7 +416,149 @@
       "form_publish_success": "Boat published.",
       "form_unpublish_success": "Boat unpublished.",
       "form_publish_error": "Publishing failed. Check required documents."
+    },
+    "LegalNoticePage": {
+      "title": "Legal notice",
+      "lastUpdated": "Last updated: August 2026",
+      "disclaimer": "SailingLoc is a fictional company created for an academic project (DEV DSP4 G3 2026). It has no legal or commercial existence. The information below is illustrative only.",
+      "sections": [
+        {
+          "heading": "Site publisher",
+          "body": "This website is published by SailingLoc, a fictional student project developed within the framework of the Digital School Project (DEV DSP4 – Group 3 – 2026). No real company, share capital or trade registration is associated with this name."
+        },
+        {
+          "heading": "Publication director",
+          "body": "The publication is carried out by the student project team. As an academic demonstration, no individual is legally designated as publication director."
+        },
+        {
+          "heading": "Contact",
+          "body": "For any question about this academic project, please contact the project team through the course's official channels. No commercial or customer-support contact is available."
+        },
+        {
+          "heading": "Hosting",
+          "body": "The demonstration is hosted on third-party cloud infrastructure used for educational purposes. Hosting details are illustrative and may change without notice."
+        },
+        {
+          "heading": "Intellectual property",
+          "body": "The SailingLoc name, logo and content are produced for academic purposes. Any resemblance to existing brands is coincidental and no commercial exploitation is intended."
+        },
+        {
+          "heading": "Liability",
+          "body": "As a fictional demonstration, SailingLoc accepts no liability for the accuracy of the content or for any use made of it. No real transaction, booking or payment can be performed on this platform."
+        }
+      ]
+    },
+    "TermsPage": {
+      "title": "Terms of use and sale",
+      "lastUpdated": "Last updated: August 2026",
+      "disclaimer": "These terms are provided for an academic project. SailingLoc is fictional; no real contract, rental or payment is formed by using this site.",
+      "sections": [
+        {
+          "heading": "Purpose",
+          "body": "These terms govern the use of the SailingLoc demonstration platform, which simulates a peer-to-peer boat rental marketplace connecting owners and renters."
+        },
+        {
+          "heading": "Account and eligibility",
+          "body": "Creating a demonstration account requires providing an email address and, for elevated roles, a phone number. All accounts and data are for testing only and may be reset at any time."
+        },
+        {
+          "heading": "Roles",
+          "body": [
+            "Renters can search for boats, simulate bookings and leave reviews after a completed rental.",
+            "Owners can list boats, manage availability and upload contractual documents.",
+            "Administrators oversee the platform. Roles are assigned within the demonstration only."
+          ]
+        },
+        {
+          "heading": "Bookings and payments",
+          "body": "Bookings use Stripe in test mode. No real money is charged and no real reservation is created. A 10% platform commission is recorded for demonstration purposes only."
+        },
+        {
+          "heading": "Cancellations",
+          "body": "Because no real transaction occurs, cancellation and refund rules are simulated and carry no financial consequence."
+        },
+        {
+          "heading": "Acceptable use",
+          "body": "Users must not attempt to misuse the demonstration, upload unlawful content or disrupt the service. Test data may be removed without notice."
+        },
+        {
+          "heading": "Changes",
+          "body": "These terms may change as the academic project evolves. Continued use of the demonstration constitutes acceptance of the current version."
+        }
+      ]
+    },
+    "PrivacyPage": {
+      "title": "Privacy policy (GDPR)",
+      "lastUpdated": "Last updated: August 2026",
+      "disclaimer": "This privacy policy is illustrative and part of an academic project. SailingLoc is fictional and does not process personal data for any real commercial purpose.",
+      "sections": [
+        {
+          "heading": "Data controller",
+          "body": "For this demonstration, the student project team acts as the notional data controller. No real data controller is legally established."
+        },
+        {
+          "heading": "Data we collect",
+          "body": [
+            "Account data: name, email address and, optionally, a phone number.",
+            "Usage data: bookings, reviews and messages created within the demonstration.",
+            "Technical data: session cookies required for authentication."
+          ]
+        },
+        {
+          "heading": "Purpose of processing",
+          "body": "Data is used only to operate the demonstration features such as authentication, simulated bookings, reviews and owner-renter messaging."
+        },
+        {
+          "heading": "Legal basis",
+          "body": "Processing relies on your consent and on the performance of the simulated service. Since the platform is fictional, no data is used for marketing or profiling."
+        },
+        {
+          "heading": "Data retention",
+          "body": "Demonstration data is kept only for the duration of the academic project and may be deleted or reset at any time without notice."
+        },
+        {
+          "heading": "Your rights",
+          "body": "Under the GDPR you have the right to access, rectify, erase, restrict and port your data, and to object to its processing. In this fictional context these rights are illustrative; you may still request removal of any test data you created."
+        },
+        {
+          "heading": "Contact",
+          "body": "Requests related to this illustrative policy can be addressed to the project team via the course's official channels."
+        }
+      ]
+    },
+    "CookiePolicyPage": {
+      "title": "Cookie policy",
+      "lastUpdated": "Last updated: August 2026",
+      "disclaimer": "This cookie policy is illustrative and part of an academic project. SailingLoc uses only the cookies strictly required to run the demonstration.",
+      "sections": [
+        {
+          "heading": "What are cookies?",
+          "body": "Cookies are small files stored on your device that allow a website to remember information about your visit, such as your login session or preferences."
+        },
+        {
+          "heading": "Cookies we use",
+          "body": [
+            "Strictly necessary cookies: used for authentication and session management. These are required for the demonstration to work.",
+            "Preference cookies: remember your chosen language and theme.",
+            "This demonstration does not load advertising or third-party analytics trackers."
+          ]
+        },
+        {
+          "heading": "Managing your consent",
+          "body": "When you first visit, a banner lets you accept or reject non-essential cookies. Your choice is stored locally in your browser and can be changed by clearing your browser storage."
+        },
+        {
+          "heading": "Managing cookies in your browser",
+          "body": "You can also block or delete cookies through your browser settings. Disabling strictly necessary cookies may prevent you from signing in to the demonstration."
+        }
+      ]
     }
+  },
+  "CookieConsent": {
+    "message": "SailingLoc uses cookies strictly necessary for the demonstration, plus optional preference cookies. This is a fictional student project.",
+    "accept": "Accept",
+    "reject": "Reject",
+    "learn_more": "Learn more"
   },
   "MetaDataAuth": {
     "login_title": "Sign in — SailingLoc",

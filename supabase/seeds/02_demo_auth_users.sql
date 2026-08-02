@@ -23,37 +23,37 @@ insert into auth.users (
   -- Jean Voisin — Administrator
   ('00000000-0000-0000-0000-000000000000',
    '10000000-0000-0000-0000-000000000001', 'authenticated', 'authenticated', 'jean.voisin@sailingloc.com',
-   crypt('Sailing2026!', gen_salt('bf')), now(), now(), now(),
+   extensions.crypt('Sailing2026!', extensions.gen_salt('bf')), now(), now(), now(),
    '{"provider":"email","providers":["email"]}', '{}', false, '', '', '', ''),
 
   -- Marc Thévenot — Owner
   ('00000000-0000-0000-0000-000000000000',
    '10000000-0000-0000-0000-000000000002', 'authenticated', 'authenticated', 'marc.thevenot@example.com',
-   crypt('Sailing2026!', gen_salt('bf')), now(), now(), now(),
+   extensions.crypt('Sailing2026!', extensions.gen_salt('bf')), now(), now(), now(),
    '{"provider":"email","providers":["email"]}', '{}', false, '', '', '', ''),
 
   -- Sophie Laurent — Owner
   ('00000000-0000-0000-0000-000000000000',
    '10000000-0000-0000-0000-000000000003', 'authenticated', 'authenticated', 'sophie.laurent@example.com',
-   crypt('Sailing2026!', gen_salt('bf')), now(), now(), now(),
+   extensions.crypt('Sailing2026!', extensions.gen_salt('bf')), now(), now(), now(),
    '{"provider":"email","providers":["email"]}', '{}', false, '', '', '', ''),
 
   -- Léa Bernard — Renter
   ('00000000-0000-0000-0000-000000000000',
    '10000000-0000-0000-0000-000000000004', 'authenticated', 'authenticated', 'lea.bernard@example.com',
-   crypt('Sailing2026!', gen_salt('bf')), now(), now(), now(),
+   extensions.crypt('Sailing2026!', extensions.gen_salt('bf')), now(), now(), now(),
    '{"provider":"email","providers":["email"]}', '{}', false, '', '', '', ''),
 
   -- Lucas Martin — Renter
   ('00000000-0000-0000-0000-000000000000',
    '10000000-0000-0000-0000-000000000005', 'authenticated', 'authenticated', 'lucas.martin@example.com',
-   crypt('Sailing2026!', gen_salt('bf')), now(), now(), now(),
+   extensions.crypt('Sailing2026!', extensions.gen_salt('bf')), now(), now(), now(),
    '{"provider":"email","providers":["email"]}', '{}', false, '', '', '', ''),
 
   -- Thomas Petit — Visitor (no phone → stays VISITOR)
   ('00000000-0000-0000-0000-000000000000',
    '10000000-0000-0000-0000-000000000006', 'authenticated', 'authenticated', 'thomas.petit@example.com',
-   crypt('Sailing2026!', gen_salt('bf')), now(), now(), now(),
+   extensions.crypt('Sailing2026!', extensions.gen_salt('bf')), now(), now(), now(),
    '{"provider":"email","providers":["email"]}', '{}', false, '', '', '', '')
 on conflict (id) do nothing;
 
