@@ -127,3 +127,26 @@
     @apply font-sans;
   }
 }
+
+/* Owner space keeps brand light colors even when the OS/theme is dark,
+   so tables/forms stay readable on white cards. */
+.owner-space {
+  --background: #f4f6f9;
+  --foreground: #1a2b48;
+  --card: #ffffff;
+  --card-foreground: #1a2b48;
+  --popover: #ffffff;
+  --popover-foreground: #1a2b48;
+  --primary: #1a2b48;
+  --primary-foreground: #ffffff;
+  --secondary: #eef2f7;
+  --secondary-foreground: #1a2b48;
+  --muted: #eef2f7;
+  --muted-foreground: #5b6b7c;
+  --accent: #eef2f7;
+  --accent-foreground: #1a2b48;
+  --border: #d7dee8;
+  --input: #d7dee8;
+  --ring: #d68a6e;
+  color: #1a2b48;
+}

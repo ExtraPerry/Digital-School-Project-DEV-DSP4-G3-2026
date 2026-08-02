@@ -16,6 +16,12 @@
       "nav_help": "Aide",
       "nav_login": "Connexion",
       "nav_register": "Inscription",
+      "nav_logout": "Déconnexion",
+      "nav_owner_space": "Espace propriétaire",
+      "nav_bookings": "Mes réservations",
+      "nav_profile": "Mon profil",
+      "nav_greeting": "Bonjour {name}",
+      "nav_account": "Mon compte",
       "hero_heading": "Sailing Loc : Location de bateaux entre particuliers en Europe",
       "hero_tagline": "Le large à un clic. La confiance en plus.",
       "hero_summary": "Louez un voilier ou un bateau à moteur auprès de propriétaires passionnés, dans les ports de France et d'Europe. Réservation sécurisée, avis vérifiés, commission transparente.",
@@ -45,6 +51,11 @@
       "featured_badge_favorite": "★ Coup de cœur",
       "featured_badge_skipper": "Skipper inclus",
       "featured_badge_new": "Nouveau",
+      "featured_badge_eco": "Éco",
+      "featured_badge_premium": "Premium",
+      "featured_skipper_included": "Skipper inclus",
+      "featured_skipper_optional": "Skipper optionnel",
+      "search_date_range_error": "La date de retour doit être postérieure à la date de départ",
       "highlight_title": "La plaisance, sans intermédiaire",
       "highlight_text": "SailingLoc met en relation propriétaires et locataires pour une expérience nautique authentique. Publiez votre annonce, gérez vos disponibilités et recevez vos paiements en toute sécurité — nous prélevons une commission de 10 % sur chaque location.",
       "highlight_owner_title": "Propriétaires",
@@ -75,6 +86,7 @@
       "footer_legal": "Mentions légales",
       "footer_terms": "CGU",
       "footer_privacy": "RGPD",
+      "footer_cookies": "Cookies",
       "footer_disclaimer": "Projet étudiant fictif : aucun achat ou réservation réel ne peut être effectué"
     },
     "BoatPage": {
@@ -107,7 +119,11 @@
       "booking_deposit_label": "Caution (remboursable)",
       "booking_total_label": "Total",
       "booking_cta": "Réserver et payer",
+      "booking_cta_login": "Connectez-vous pour réserver",
+      "booking_cta_loading": "Redirection vers le paiement…",
       "booking_payment_note": "Paiement sécurisé via Stripe — projet fictif",
+      "booking_error_unavailable": "Ces dates ne sont plus disponibles.",
+      "booking_error_generic": "Impossible de démarrer le paiement. Réessayez.",
       "not_found_title": "Ce bateau n'existe pas",
       "not_found_text": "Le bateau que vous recherchez n'est plus disponible ou n'existe pas.",
       "not_found_link": "Retour à l'accueil"
@@ -115,9 +131,31 @@
     "SearchPage": {
       "meta_title": "Recherche — SailingLoc",
       "meta_description": "Recherchez un bateau disponible sur SailingLoc.",
-      "title": "La recherche arrive bientôt",
-      "subtitle": "Nous travaillons sur la liste des bateaux disponibles selon vos critères. Revenez très vite !",
-      "back_link": "Retour à l'accueil"
+      "breadcrumb_home": "Accueil",
+      "result_count": "{count, plural, one {# bateau} other {# bateaux}} à {port} du {from} au {to}",
+      "result_count_empty": "Aucun bateau trouvé",
+      "modify_button": "Modifier",
+      "filters_title": "Filtres",
+      "filters_apply": "Appliquer",
+      "filters_boat_type": "Type de bateau",
+      "filters_skipper": "Avec skipper",
+      "filters_price_label": "Prix / jour",
+      "filters_price_range": "{min} € — {max} €",
+      "filters_length_label": "Longueur",
+      "filters_length_range": "{min} m — {max} m",
+      "filters_equipment": "Équipements",
+      "equipment_GPS": "GPS",
+      "equipment_SLEEPING_BERTHS": "Couchages",
+      "equipment_EQUIPPED_KITCHEN": "Cuisine équipée",
+      "sort_label": "Tri",
+      "sort_relevance": "Pertinence",
+      "sort_rating": "Note",
+      "sort_price_asc": "Prix croissant",
+      "sort_price_desc": "Prix décroissant",
+      "empty_title": "Aucun bateau disponible",
+      "empty_text": "Aucun bateau ne correspond à vos critères. Essayez d'ajuster vos dates ou vos filtres.",
+      "open_filters": "Filtres",
+      "price_unit": "jour"
     },
     "AuthPage": {
       "hero_tagline": "Le large à un clic. La confiance en plus.",
@@ -155,7 +193,372 @@
       "error_email_taken": "Un compte existe déjà avec cette adresse e-mail.",
       "error_weak_password": "Le mot de passe ne respecte pas les critères de sécurité.",
       "error_generic": "Une erreur est survenue. Veuillez réessayer."
+    },
+    "ProfilePage": {
+      "meta_title": "Mon profil — SailingLoc",
+      "meta_description": "Consultez et mettez à jour vos informations SailingLoc.",
+      "title": "Mon profil",
+      "subtitle": "Gérez vos informations personnelles et les détails de votre compte.",
+      "loading": "Chargement de votre profil…",
+      "error": "Impossible de charger votre profil. Réessayez.",
+      "first_name_label": "Prénom",
+      "last_name_label": "Nom",
+      "email_label": "E-mail",
+      "email_readonly_hint": "L'e-mail ne peut pas être modifié ici.",
+      "phone_label": "Téléphone",
+      "phone_placeholder": "+33 6 12 34 56 78",
+      "validation_first_name": "Le prénom est requis.",
+      "validation_last_name": "Le nom est requis.",
+      "validation_phone": "Saisissez un numéro de téléphone valide.",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "save_success": "Profil mis à jour.",
+      "save_error": "Impossible de mettre à jour le profil.",
+      "view_bookings": "Mes réservations",
+      "become_owner": "Devenir propriétaire",
+      "owner_space": "Espace propriétaire",
+      "personal_info_heading": "Informations personnelles",
+      "upcoming_bookings_heading": "Réservations à venir",
+      "upcoming_bookings_subtitle": "Vos locations en attente et confirmées. Utilisez le chat pour échanger avec le propriétaire.",
+      "upcoming_bookings_loading": "Chargement de vos réservations à venir…",
+      "upcoming_bookings_empty": "Aucune réservation à venir. Trouvez un bateau et larguez les amarres !",
+      "chat_cta": "Discuter avec le propriétaire",
+      "chat_title": "Discussion avec le propriétaire",
+      "chat_description": "Conversation à propos de votre réservation de {boat}.",
+      "chat_loading": "Chargement des messages…",
+      "chat_empty": "Aucun message pour le moment. Dites bonjour au propriétaire !",
+      "chat_input_placeholder": "Écrivez un message…",
+      "chat_send": "Envoyer",
+      "chat_error": "Échec de l'envoi du message. Veuillez réessayer.",
+      "past_bookings_heading": "Réservations passées",
+      "past_bookings_subtitle": "Locations terminées et les avis que vous y avez laissés.",
+      "past_bookings_loading": "Chargement des réservations passées…",
+      "past_bookings_empty": "Vous n'avez encore aucune réservation terminée.",
+      "past_booking_no_review": "Aucun avis laissé pour cette location.",
+      "leave_review_cta": "Laisser un avis",
+      "average_rating": "Note moyenne : {rating} ({count, plural, one {# avis} other {# avis}})",
+      "reviews_heading": "Commentaires et notes",
+      "reviews_subtitle": "Tous les avis que vous avez publiés sur des bateaux.",
+      "reviews_loading": "Chargement de vos avis…",
+      "reviews_empty": "Vous n'avez encore laissé aucun avis.",
+      "view_boat": "Voir le bateau",
+      "unknown_boat": "Bateau inconnu"
+    },
+    "BookingsPage": {
+      "meta_title": "Mes réservations — SailingLoc",
+      "meta_description": "Consultez vos réservations de bateaux sur SailingLoc.",
+      "title": "Mes réservations",
+      "subtitle": "Suivez les paiements en cours, les prochaines sorties et les locations passées.",
+      "loading": "Chargement de vos réservations…",
+      "error": "Impossible de charger vos réservations. Réessayez.",
+      "empty": "Vous n'avez encore aucune réservation.",
+      "empty_cta": "Rechercher un bateau",
+      "checkout_success": "Paiement reçu. Votre réservation apparaîtra bientôt comme confirmée.",
+      "checkout_cancelled": "Le paiement a été annulé. Aucun montant n'a été débité.",
+      "status_pending": "En attente de paiement",
+      "status_confirmed": "Confirmée",
+      "status_cancelled": "Annulée",
+      "status_completed": "Terminée",
+      "payment_status": "Paiement : {status}",
+      "payment_pending": "En attente",
+      "payment_paid": "Payé",
+      "payment_expired": "Expiré",
+      "total_label": "Total {amount}",
+      "view_boat": "Voir le bateau",
+      "unknown_boat": "Bateau inconnu",
+      "review_cta": "Laisser un avis",
+      "review_done": "Avis publié",
+      "review_title": "Laisser un avis",
+      "review_description": "Partagez votre expérience à bord de {boat}.",
+      "review_rating_label": "Note",
+      "review_rating_star": "{rating} étoile(s)",
+      "review_comment_label": "Commentaire",
+      "review_comment_placeholder": "Qu'avez-vous apprécié lors de cette location ?",
+      "review_validation_rating": "Choisissez une note entre 1 et 5.",
+      "review_validation_comment_min": "Le commentaire doit contenir au moins 10 caractères.",
+      "review_validation_comment_max": "Le commentaire doit contenir au plus 1000 caractères.",
+      "review_cancel": "Annuler",
+      "review_submit": "Publier l'avis",
+      "review_submitting": "Publication…",
+      "review_success": "Merci ! Votre avis a été publié.",
+      "review_error": "Impossible de publier l'avis.",
+      "review_anonymous_author": "Marin anonyme"
+    },
+    "BecomeOwnerPage": {
+      "title": "Devenir propriétaire",
+      "subtitle": "Publiez vos bateaux, gérez le calendrier et les documents contractuels depuis un espace dédié.",
+      "loading": "Chargement...",
+      "login_required": "Connectez-vous pour devenir propriétaire sur SailingLoc.",
+      "login_cta": "Se connecter",
+      "register_cta": "Créer un compte",
+      "profile_error": "Impossible de charger votre profil. Réessayez ou reconnectez-vous.",
+      "go_home": "Retour à l'accueil",
+      "already_owner": "Votre compte est déjà propriétaire. Accédez à votre espace.",
+      "go_to_dashboard": "Ouvrir l'espace propriétaire",
+      "renter_required": "Seuls les comptes locataires (e-mail et téléphone renseignés) peuvent devenir propriétaires.",
+      "renter_required_hint": "Complétez votre profil avec un numéro de téléphone, puis réessayez.",
+      "description": "Passez en compte propriétaire pour mettre vos bateaux en location entre particuliers.",
+      "benefit_1": "Créer et publier vos annonces (brouillon jusqu'aux documents validés)",
+      "benefit_2": "Gérer les disponibilités sur un calendrier dédié",
+      "benefit_3": "Déposer permis bateau, assurances et CV marin",
+      "cta": "Activer mon espace propriétaire",
+      "success": "Espace propriétaire activé.",
+      "error": "Impossible d'activer l'espace propriétaire."
+    },
+    "OwnerSpace": {
+      "sidebar_section": "Espace propriétaire",
+      "sidebar_nav_label": "Navigation propriétaire",
+      "nav_dashboard": "Tableau de bord",
+      "nav_boats": "Mes bateaux",
+      "nav_calendar": "Calendrier",
+      "nav_documents": "Documents",
+      "nav_profile": "Mon profil",
+      "nav_logout": "Déconnexion",
+      "loading": "Chargement...",
+      "greeting": "Bonjour {name} 👋",
+      "greeting_fallback_name": "propriétaire",
+      "greeting_subtitle": "Voici un aperçu de votre activité",
+      "add_boat_cta": "Ajouter un bateau",
+      "stat_revenue_label": "Revenus du mois",
+      "stat_revenue_placeholder": "—",
+      "stat_revenue_hint": "Bientôt disponible",
+      "stat_reservations_label": "Réservations",
+      "stat_reservations_placeholder": "—",
+      "stat_occupancy_label": "Taux d'occupation",
+      "stat_occupancy_placeholder": "—",
+      "stat_placeholder_hint": "Bientôt disponible",
+      "stat_rating_label": "Note moyenne",
+      "stat_rating_hint": "sur vos bateaux",
+      "boats_section_title": "Mes bateaux",
+      "boats_section_see_all": "Voir tout",
+      "boats_page_title": "Mes bateaux",
+      "boats_new_title": "Ajouter un bateau",
+      "boats_edit_title": "Éditer — {name}",
+      "boats_edit_not_found": "Bateau introuvable.",
+      "boats_empty": "Aucun bateau pour le moment. Créez votre première annonce.",
+      "boats_col_name": "Bateau",
+      "boats_col_type": "Type",
+      "boats_col_port": "Port",
+      "boats_col_status": "Statut",
+      "boats_col_price": "Tarif",
+      "boats_col_actions": "Actions",
+      "boats_action_edit": "Éditer",
+      "boats_action_complete": "Compléter",
+      "status_published": "Publié",
+      "status_draft": "Brouillon",
+      "price_per_day": "{price}/j",
+      "type_sailboat": "Voilier",
+      "type_motorboat": "Bateau à moteur",
+      "type_catamaran": "Catamaran",
+      "type_yacht": "Yacht",
+      "skipper_included": "Skipper inclus",
+      "skipper_optional": "Skipper optionnel",
+      "skipper_none": "Sans skipper",
+      "documents_section_title": "Documents contractuels",
+      "documents_section_manage": "Gérer",
+      "documents_page_title": "Documents",
+      "documents_page_subtitle": "Permis, assurances et CV marin requis pour publier une annonce.",
+      "doc_license_title": "Permis bateau",
+      "doc_sailor_cv_title": "CV marin",
+      "doc_insurance_title": "Assurance — {boatName}",
+      "doc_missing_file": "À téléverser",
+      "doc_status_validated": "✓ Validé",
+      "doc_status_draft": "Brouillon",
+      "doc_status_missing": "À téléverser",
+      "doc_upload_cta": "+ Téléverser",
+      "doc_replace_cta": "Remplacer",
+      "doc_upload_success": "Document téléversé.",
+      "doc_upload_error": "Échec du téléversement.",
+      "calendar_page_title": "Calendrier",
+      "calendar_page_subtitle": "Définissez les périodes de disponibilité de vos bateaux.",
+      "calendar_boat_label": "Bateau",
+      "calendar_boat_placeholder": "Choisir un bateau",
+      "calendar_add_cta": "Ajouter la disponibilité",
+      "calendar_slots_title": "Périodes de disponibilité",
+      "calendar_no_boat": "Créez d'abord un bateau pour gérer le calendrier.",
+      "calendar_slots_empty": "Aucune période définie pour ce bateau.",
+      "calendar_range_required": "Sélectionnez une plage de dates.",
+      "calendar_range_hint": "Sélectionnez une plage de dates sur le calendrier",
+      "calendar_add_success": "Disponibilité ajoutée.",
+      "calendar_add_error": "Impossible d'ajouter la disponibilité.",
+      "calendar_delete_cta": "Supprimer",
+      "calendar_delete_success": "Disponibilité supprimée.",
+      "calendar_delete_error": "Impossible de supprimer la disponibilité.",
+      "profile_page_title": "Mon profil",
+      "profile_first_name": "Prénom",
+      "profile_last_name": "Nom",
+      "profile_email": "E-mail",
+      "profile_phone": "Téléphone",
+      "form_name_label": "Nom du bateau",
+      "form_type_label": "Type",
+      "form_port_label": "Port",
+      "form_port_placeholder": "Sélectionner un port",
+      "form_skipper_label": "Option skipper",
+      "form_length_label": "Longueur (m)",
+      "form_width_label": "Largeur (m)",
+      "form_draft_label": "Tirant d'eau (m)",
+      "form_capacity_label": "Capacité",
+      "form_motorization_label": "Motorisation",
+      "form_price_label": "Tarif / jour (€)",
+      "form_deposit_label": "Caution (€)",
+      "form_description_label": "Description",
+      "form_validation_name": "Le nom doit contenir au moins 2 caractères",
+      "form_validation_port": "Sélectionnez un port",
+      "form_validation_number": "Valeur numérique invalide",
+      "form_create_cta": "Créer en brouillon",
+      "form_save_cta": "Enregistrer",
+      "form_publish_cta": "Publier",
+      "form_unpublish_cta": "Dépublier",
+      "form_publish_blocked": "Ajoutez le permis bateau, le CV marin et l'assurance de ce bateau avant de publier.",
+      "form_create_success": "Bateau créé en brouillon.",
+      "form_save_success": "Bateau enregistré.",
+      "form_save_error": "Impossible d'enregistrer le bateau.",
+      "form_publish_success": "Bateau publié.",
+      "form_unpublish_success": "Bateau dépublié.",
+      "form_publish_error": "Publication impossible. Vérifiez les documents requis."
+    },
+    "LegalNoticePage": {
+      "title": "Mentions légales",
+      "lastUpdated": "Dernière mise à jour : août 2026",
+      "disclaimer": "SailingLoc est une entreprise fictive créée pour un projet académique (DEV DSP4 G3 2026). Elle n'a aucune existence légale ou commerciale. Les informations ci-dessous sont fournies à titre purement illustratif.",
+      "sections": [
+        {
+          "heading": "Éditeur du site",
+          "body": "Ce site est édité par SailingLoc, un projet étudiant fictif développé dans le cadre du Digital School Project (DEV DSP4 – Groupe 3 – 2026). Aucune société réelle, aucun capital social ni immatriculation ne sont associés à ce nom."
+        },
+        {
+          "heading": "Directeur de la publication",
+          "body": "La publication est assurée par l'équipe du projet étudiant. S'agissant d'une démonstration académique, aucune personne n'est légalement désignée comme directeur de la publication."
+        },
+        {
+          "heading": "Contact",
+          "body": "Pour toute question relative à ce projet académique, veuillez contacter l'équipe projet via les canaux officiels de la formation. Aucun contact commercial ou support client n'est disponible."
+        },
+        {
+          "heading": "Hébergement",
+          "body": "La démonstration est hébergée sur une infrastructure cloud tierce utilisée à des fins pédagogiques. Les informations d'hébergement sont illustratives et peuvent changer sans préavis."
+        },
+        {
+          "heading": "Propriété intellectuelle",
+          "body": "Le nom, le logo et le contenu de SailingLoc sont produits à des fins académiques. Toute ressemblance avec des marques existantes est fortuite et aucune exploitation commerciale n'est envisagée."
+        },
+        {
+          "heading": "Responsabilité",
+          "body": "En tant que démonstration fictive, SailingLoc décline toute responsabilité quant à l'exactitude du contenu ou à l'usage qui pourrait en être fait. Aucune transaction, réservation ou paiement réel ne peut être effectué sur cette plateforme."
+        }
+      ]
+    },
+    "TermsPage": {
+      "title": "Conditions générales d'utilisation et de vente",
+      "lastUpdated": "Dernière mise à jour : août 2026",
+      "disclaimer": "Ces conditions sont fournies pour un projet académique. SailingLoc est fictif ; aucun contrat, location ou paiement réel n'est formé par l'utilisation de ce site.",
+      "sections": [
+        {
+          "heading": "Objet",
+          "body": "Ces conditions régissent l'utilisation de la plateforme de démonstration SailingLoc, qui simule une place de marché de location de bateaux entre particuliers reliant propriétaires et locataires."
+        },
+        {
+          "heading": "Compte et éligibilité",
+          "body": "La création d'un compte de démonstration nécessite une adresse e-mail et, pour les rôles élevés, un numéro de téléphone. Tous les comptes et données servent uniquement aux tests et peuvent être réinitialisés à tout moment."
+        },
+        {
+          "heading": "Rôles",
+          "body": [
+            "Les locataires peuvent rechercher des bateaux, simuler des réservations et laisser des avis après une location terminée.",
+            "Les propriétaires peuvent publier des annonces, gérer les disponibilités et téléverser des documents contractuels.",
+            "Les administrateurs supervisent la plateforme. Les rôles ne sont attribués que dans la démonstration."
+          ]
+        },
+        {
+          "heading": "Réservations et paiements",
+          "body": "Les réservations utilisent Stripe en mode test. Aucun montant réel n'est débité et aucune réservation réelle n'est créée. Une commission de plateforme de 10 % est enregistrée uniquement à des fins de démonstration."
+        },
+        {
+          "heading": "Annulations",
+          "body": "Aucune transaction réelle n'ayant lieu, les règles d'annulation et de remboursement sont simulées et n'ont aucune conséquence financière."
+        },
+        {
+          "heading": "Usage acceptable",
+          "body": "Les utilisateurs ne doivent pas détourner la démonstration, publier de contenu illicite ni perturber le service. Les données de test peuvent être supprimées sans préavis."
+        },
+        {
+          "heading": "Modifications",
+          "body": "Ces conditions peuvent évoluer avec le projet académique. La poursuite de l'utilisation de la démonstration vaut acceptation de la version en vigueur."
+        }
+      ]
+    },
+    "PrivacyPage": {
+      "title": "Politique de confidentialité (RGPD)",
+      "lastUpdated": "Dernière mise à jour : août 2026",
+      "disclaimer": "Cette politique de confidentialité est illustrative et s'inscrit dans un projet académique. SailingLoc est fictif et ne traite aucune donnée personnelle à des fins commerciales réelles.",
+      "sections": [
+        {
+          "heading": "Responsable du traitement",
+          "body": "Pour cette démonstration, l'équipe du projet étudiant agit comme responsable de traitement notionnel. Aucun responsable de traitement réel n'est légalement établi."
+        },
+        {
+          "heading": "Données que nous collectons",
+          "body": [
+            "Données de compte : nom, adresse e-mail et, facultativement, un numéro de téléphone.",
+            "Données d'usage : réservations, avis et messages créés dans la démonstration.",
+            "Données techniques : cookies de session nécessaires à l'authentification."
+          ]
+        },
+        {
+          "heading": "Finalité du traitement",
+          "body": "Les données servent uniquement au fonctionnement des fonctionnalités de démonstration telles que l'authentification, les réservations simulées, les avis et la messagerie propriétaire-locataire."
+        },
+        {
+          "heading": "Base légale",
+          "body": "Le traitement repose sur votre consentement et sur l'exécution du service simulé. La plateforme étant fictive, aucune donnée n'est utilisée à des fins de marketing ou de profilage."
+        },
+        {
+          "heading": "Durée de conservation",
+          "body": "Les données de démonstration ne sont conservées que pour la durée du projet académique et peuvent être supprimées ou réinitialisées à tout moment sans préavis."
+        },
+        {
+          "heading": "Vos droits",
+          "body": "Au titre du RGPD, vous disposez des droits d'accès, de rectification, d'effacement, de limitation et de portabilité de vos données, ainsi que du droit d'opposition. Dans ce contexte fictif, ces droits sont illustratifs ; vous pouvez néanmoins demander la suppression des données de test que vous avez créées."
+        },
+        {
+          "heading": "Contact",
+          "body": "Les demandes relatives à cette politique illustrative peuvent être adressées à l'équipe projet via les canaux officiels de la formation."
+        }
+      ]
+    },
+    "CookiePolicyPage": {
+      "title": "Politique de cookies",
+      "lastUpdated": "Dernière mise à jour : août 2026",
+      "disclaimer": "Cette politique de cookies est illustrative et s'inscrit dans un projet académique. SailingLoc n'utilise que les cookies strictement nécessaires au fonctionnement de la démonstration.",
+      "sections": [
+        {
+          "heading": "Que sont les cookies ?",
+          "body": "Les cookies sont de petits fichiers stockés sur votre appareil qui permettent à un site de mémoriser des informations sur votre visite, comme votre session de connexion ou vos préférences."
+        },
+        {
+          "heading": "Cookies que nous utilisons",
+          "body": [
+            "Cookies strictement nécessaires : utilisés pour l'authentification et la gestion de session. Ils sont indispensables au fonctionnement de la démonstration.",
+            "Cookies de préférences : mémorisent la langue et le thème choisis.",
+            "Cette démonstration ne charge aucun traceur publicitaire ni aucun outil d'analyse tiers."
+          ]
+        },
+        {
+          "heading": "Gérer votre consentement",
+          "body": "Lors de votre première visite, un bandeau vous permet d'accepter ou de refuser les cookies non essentiels. Votre choix est enregistré localement dans votre navigateur et peut être modifié en vidant le stockage de votre navigateur."
+        },
+        {
+          "heading": "Gérer les cookies dans votre navigateur",
+          "body": "Vous pouvez également bloquer ou supprimer les cookies via les paramètres de votre navigateur. La désactivation des cookies strictement nécessaires peut vous empêcher de vous connecter à la démonstration."
+        }
+      ]
     }
+  },
+  "CookieConsent": {
+    "message": "SailingLoc utilise des cookies strictement nécessaires à la démonstration, ainsi que des cookies de préférences facultatifs. Il s'agit d'un projet étudiant fictif.",
+    "accept": "Accepter",
+    "reject": "Refuser",
+    "learn_more": "En savoir plus"
   },
   "MetaDataAuth": {
     "login_title": "Connexion — SailingLoc",

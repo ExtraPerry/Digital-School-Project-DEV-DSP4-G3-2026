@@ -14,14 +14,17 @@ export async function SiteFooter() {
           aria-label="Footer navigation"
           className="flex flex-wrap justify-center gap-6 text-sm text-white/70"
         >
-          <Link className="transition-colors hover:text-white" href="#">
+          <Link className="transition-colors hover:text-white" href="/legal">
             {t("footer_legal")}
           </Link>
-          <Link className="transition-colors hover:text-white" href="#">
+          <Link className="transition-colors hover:text-white" href="/terms">
             {t("footer_terms")}
           </Link>
-          <Link className="transition-colors hover:text-white" href="#">
+          <Link className="transition-colors hover:text-white" href="/privacy">
             {t("footer_privacy")}
+          </Link>
+          <Link className="transition-colors hover:text-white" href="/cookies">
+            {t("footer_cookies")}
           </Link>
         </nav>
         <LocaleSwitcher variant="dark" />

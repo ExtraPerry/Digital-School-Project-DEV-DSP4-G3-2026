@@ -36,6 +36,7 @@ yarn-error.log*
 # env files
 .env*
 !.env.example
+!supabase/functions/.env.example
 
 # vercel
 .vercel

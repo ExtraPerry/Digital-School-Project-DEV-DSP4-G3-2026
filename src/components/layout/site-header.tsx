@@ -1,11 +1,39 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { SailingLocLogo } from "@/components/brand/sailing-loc-logo";
-import { Button } from "@/components/ui/button";
 import { LocaleSwitcher } from "@/components/landing/locale-switcher";
+import { SiteHeaderAuthActions } from "@/components/layout/site-header-auth-actions";
+import createSupabaseServerClient from "@/lib/supabase/createSupabaseServerClient";
 
 export async function SiteHeader() {
   const t = await getTranslations("Pages.LandingPage");
+  const supabase = await createSupabaseServerClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let firstName: string | null = null;
+  let isOwner = false;
+
+  if (user) {
+    const [{ data: profile }, { data: roleRow }] = await Promise.all([
+      supabase
+        .from("users")
+        .select("first_name")
+        .eq("auth_id", user.id)
+        .maybeSingle(),
+      supabase
+        .from("user_roles")
+        .select("role")
+        .eq("auth_id", user.id)
+        .maybeSingle(),
+    ]);
+
+    firstName = profile?.first_name ?? null;
+    isOwner =
+      roleRow?.role === "OWNER" || roleRow?.role === "ADMINISTRATOR";
+  }
 
   return (
     <header className="sticky top-0 z-50 bg-[#1a2b48]">
@@ -17,16 +45,19 @@ export async function SiteHeader() {
         >
           <Link
             className="text-white/90 transition-colors hover:text-white"
-            href="#"
+            href="/search"
           >
             {t("nav_search_boat")}
           </Link>
-          <Link
-            className="text-white/90 transition-colors hover:text-white"
-            href="#"
-          >
-            {t("nav_become_owner")}
-          </Link>
+          {/* Owners already get the coral "Owner space" button on the right. */}
+          {!isOwner ? (
+            <Link
+              className="text-white/90 transition-colors hover:text-white"
+              href="/become-owner"
+            >
+              {t("nav_become_owner")}
+            </Link>
+          ) : null}
           <Link
             className="text-white/90 transition-colors hover:text-white"
             href="#"
@@ -38,23 +69,11 @@ export async function SiteHeader() {
           </span>
           <LocaleSwitcher variant="dark" />
         </nav>
-        <div className="flex items-center gap-3">
-          <Button
-            asChild
-            className="rounded-md border border-white/40 bg-transparent px-5 text-white shadow-none hover:bg-white/10"
-            size="sm"
-            variant="ghost"
-          >
-            <Link href="/login">{t("nav_login")}</Link>
-          </Button>
-          <Button
-            asChild
-            className="rounded-md bg-[#D68A6E] px-5 text-white hover:bg-[#c57d5f]"
-            size="sm"
-          >
-            <Link href="/register">{t("nav_register")}</Link>
-          </Button>
-        </div>
+        <SiteHeaderAuthActions
+          firstName={firstName}
+          isAuthenticated={Boolean(user)}
+          isOwner={isOwner}
+        />
       </div>
     </header>
   );

@@ -5,8 +5,8 @@ import { Link } from "@/i18n/navigation";
 import { HeroSearchBar } from "@/components/landing/hero-search-bar";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
+import { BoatCard } from "@/components/boats/boat-card";
 import createSupabaseServerClient from "@/lib/supabase/createSupabaseServerClient";
-import { BOAT_TYPE_GRADIENTS } from "@/lib/boats";
 import { cn } from "@/lib/utils";
 
 const playfair = Playfair_Display({
@@ -69,69 +69,6 @@ function StepCard({
   );
 }
 
-function BoatCard({
-  badge,
-  gradient,
-  href,
-  locale,
-  location,
-  name,
-  price,
-  rating,
-  size,
-  typeLabel,
-  unitLabel,
-}: {
-  badge?: string;
-  gradient: string;
-  href: string;
-  locale: string;
-  location: string;
-  name: string;
-  price: string;
-  rating: number;
-  size: number;
-  typeLabel: string;
-  unitLabel: string;
-}) {
-  return (
-    <Link
-      className="block overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm transition-shadow hover:shadow-md"
-      href={href}
-    >
-      <article>
-        <div
-          className={cn(
-            "flex h-40 items-start bg-gradient-to-br p-3",
-            gradient,
-          )}
-        >
-          {badge ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#1a2b48] shadow-sm">
-              {badge}
-            </span>
-          ) : null}
-        </div>
-        <div className="flex flex-col gap-1 p-4">
-          <div className="flex items-center justify-between gap-2">
-            <span className="font-semibold text-[#1a2b48]">{name}</span>
-            <span className="flex items-center gap-1 text-sm font-medium text-[#1a2b48]">
-              <Star aria-hidden className="size-3.5 fill-[#c9866a] text-[#c9866a]" />
-              {rating.toLocaleString(locale)}
-            </span>
-          </div>
-          <p className="text-sm text-neutral-500">
-            {typeLabel} · {size.toLocaleString(locale)} m · {location}
-          </p>
-          <p className="mt-1">
-            <span className="text-lg font-bold text-[#1a2b48]">{price}</span>
-            <span className="text-sm text-neutral-500"> / {unitLabel}</span>
-          </p>
-        </div>
-      </article>
-    </Link>
-  );
-}
 
 function TestimonialCard({
   name,
@@ -161,11 +98,6 @@ function TestimonialCard({
 export async function LandingPage() {
   const t = await getTranslations("Pages.LandingPage");
   const locale = await getLocale();
-  const priceFormatter = new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 0,
-  });
 
   const supabase = await createSupabaseServerClient();
   const { data: ports } = await supabase
@@ -175,7 +107,7 @@ export async function LandingPage() {
 
   const { data: boats } = await supabase
     .from("boats")
-    .select("id, name, type, length_m, price_per_day, rating, badge, ports(name)")
+    .select("id, name, type, length_m, price_per_day, rating, badge, motorization, skipper_option, ports(name)")
     .order("rating", { ascending: false })
     .limit(4);
 
@@ -280,16 +212,29 @@ export async function LandingPage() {
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {(boats ?? []).map((boat) => (
                 <BoatCard
-                  badge={boat.badge ? t(`featured_badge_${boat.badge}`) : undefined}
-                  gradient={BOAT_TYPE_GRADIENTS[boat.type]}
+                  boat={{
+                    id: boat.id,
+                    name: boat.name,
+                    type: boat.type,
+                    length_m: boat.length_m,
+                    price_per_day: boat.price_per_day,
+                    rating: boat.rating,
+                    badge: boat.badge,
+                    port_name: boat.ports?.name ?? "",
+                    motorization: boat.motorization,
+                    skipper_option: boat.skipper_option,
+                  }}
+                  badgeLabel={boat.badge ? t(`featured_badge_${boat.badge}`) : undefined}
                   href={`/boats/${boat.id}`}
                   key={boat.id}
                   locale={locale}
-                  location={boat.ports?.name ?? ""}
-                  name={boat.name}
-                  price={priceFormatter.format(boat.price_per_day)}
-                  rating={boat.rating}
-                  size={boat.length_m}
+                  skipperLabel={
+                    boat.skipper_option === "INCLUDED"
+                      ? t("featured_skipper_included")
+                      : boat.skipper_option === "OPTIONAL"
+                        ? t("featured_skipper_optional")
+                        : undefined
+                  }
                   typeLabel={t(`search_type_${boat.type.toLowerCase()}`)}
                   unitLabel={t("featured_boats_price_unit")}
                 />
