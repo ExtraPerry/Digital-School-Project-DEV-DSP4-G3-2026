@@ -15,6 +15,7 @@ export async function SiteHeader() {
 
   let firstName: string | null = null;
   let isOwner = false;
+  let isAdmin = false;
 
   if (user) {
     const [{ data: profile }, { data: roleRow }] = await Promise.all([
@@ -33,6 +34,7 @@ export async function SiteHeader() {
     firstName = profile?.first_name ?? null;
     isOwner =
       roleRow?.role === "OWNER" || roleRow?.role === "ADMINISTRATOR";
+    isAdmin = roleRow?.role === "ADMINISTRATOR";
   }
 
   return (
@@ -71,6 +73,7 @@ export async function SiteHeader() {
         </nav>
         <SiteHeaderAuthActions
           firstName={firstName}
+          isAdmin={isAdmin}
           isAuthenticated={Boolean(user)}
           isOwner={isOwner}
         />

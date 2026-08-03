@@ -9,6 +9,50 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_audit_log: {
+        Row: {
+          action: Database["public"]["Enums"]["admin_action_type"]
+          actor_email_snapshot: string | null
+          actor_user_id: string | null
+          created_at: string
+          details: Json
+          id: string
+          target_id: string
+          target_table: string
+          updated_at: string
+        }
+        Insert: {
+          action: Database["public"]["Enums"]["admin_action_type"]
+          actor_email_snapshot?: string | null
+          actor_user_id?: string | null
+          created_at?: string
+          details?: Json
+          id?: string
+          target_id: string
+          target_table: string
+          updated_at?: string
+        }
+        Update: {
+          action?: Database["public"]["Enums"]["admin_action_type"]
+          actor_email_snapshot?: string | null
+          actor_user_id?: string | null
+          created_at?: string
+          details?: Json
+          id?: string
+          target_id?: string
+          target_table?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_audit_log_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       boat_availability_time_slots: {
         Row: {
           boat_id: string
@@ -223,6 +267,9 @@ export type Database = {
           comment: string
           created_at: string
           id: string
+          moderated_at: string | null
+          moderated_by: string | null
+          moderation_status: Database["public"]["Enums"]["review_moderation_status"]
           rating: number
           reservation_id: string | null
           reviewer_id: string | null
@@ -234,6 +281,9 @@ export type Database = {
           comment: string
           created_at?: string
           id?: string
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_status?: Database["public"]["Enums"]["review_moderation_status"]
           rating: number
           reservation_id?: string | null
           reviewer_id?: string | null
@@ -245,6 +295,9 @@ export type Database = {
           comment?: string
           created_at?: string
           id?: string
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_status?: Database["public"]["Enums"]["review_moderation_status"]
           rating?: number
           reservation_id?: string | null
           reviewer_id?: string | null
@@ -256,6 +309,13 @@ export type Database = {
             columns: ["boat_id"]
             isOneToOne: false
             referencedRelation: "boats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "boat_reviews_moderated_by_fkey"
+            columns: ["moderated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
@@ -511,6 +571,7 @@ export type Database = {
       }
       users: {
         Row: {
+          account_status: Database["public"]["Enums"]["user_account_status"]
           auth_id: string
           created_at: string
           email: string | null
@@ -521,6 +582,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          account_status?: Database["public"]["Enums"]["user_account_status"]
           auth_id: string
           created_at?: string
           email?: string | null
@@ -531,6 +593,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          account_status?: Database["public"]["Enums"]["user_account_status"]
           auth_id?: string
           created_at?: string
           email?: string | null
@@ -547,6 +610,84 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_moderate_review: {
+        Args: {
+          p_review_id: string
+          p_status: Database["public"]["Enums"]["review_moderation_status"]
+        }
+        Returns: {
+          author_name: string
+          boat_id: string
+          comment: string
+          created_at: string
+          id: string
+          moderated_at: string | null
+          moderated_by: string | null
+          moderation_status: Database["public"]["Enums"]["review_moderation_status"]
+          rating: number
+          reservation_id: string | null
+          reviewer_id: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "boat_reviews"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_platform_stats: {
+        Args: never
+        Returns: {
+          commission_this_month: number
+          published_boats: number
+          reservations_this_month: number
+          total_users: number
+        }[]
+      }
+      admin_set_user_role: {
+        Args: {
+          p_role: Database["public"]["Enums"]["user_roles_type"]
+          p_user_id: string
+        }
+        Returns: {
+          auth_id: string
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["user_roles_type"]
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "user_roles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_set_user_status: {
+        Args: {
+          p_status: Database["public"]["Enums"]["user_account_status"]
+          p_user_id: string
+        }
+        Returns: {
+          account_status: Database["public"]["Enums"]["user_account_status"]
+          auth_id: string
+          created_at: string
+          email: string | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          phone: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "users"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_boat_filter_bounds: {
         Args: { p_port_name: string }
         Returns: {
@@ -594,6 +735,12 @@ export type Database = {
       }
     }
     Enums: {
+      admin_action_type:
+        | "SET_USER_ROLE"
+        | "SET_USER_STATUS"
+        | "MODERATE_REVIEW"
+        | "PUBLISH_BOAT"
+        | "UNPUBLISH_BOAT"
       boat_document_type:
         | "INSURANCE"
         | "REGISTRATION"
@@ -604,6 +751,8 @@ export type Database = {
       boat_skipper_option: "INCLUDED" | "OPTIONAL" | "NONE"
       boat_type: "SAILBOAT" | "MOTORBOAT" | "CATAMARAN" | "YACHT"
       reservation_status: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED"
+      review_moderation_status: "APPROVED" | "FLAGGED" | "REJECTED"
+      user_account_status: "ACTIVE" | "PENDING" | "SUSPENDED"
       user_roles_type: "VISITOR" | "RENTER" | "OWNER" | "ADMINISTRATOR"
     }
     CompositeTypes: {
@@ -732,6 +881,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      admin_action_type: [
+        "SET_USER_ROLE",
+        "SET_USER_STATUS",
+        "MODERATE_REVIEW",
+        "PUBLISH_BOAT",
+        "UNPUBLISH_BOAT",
+      ],
       boat_document_type: [
         "INSURANCE",
         "REGISTRATION",
@@ -743,6 +899,8 @@ export const Constants = {
       boat_skipper_option: ["INCLUDED", "OPTIONAL", "NONE"],
       boat_type: ["SAILBOAT", "MOTORBOAT", "CATAMARAN", "YACHT"],
       reservation_status: ["PENDING", "CONFIRMED", "CANCELLED", "COMPLETED"],
+      review_moderation_status: ["APPROVED", "FLAGGED", "REJECTED"],
+      user_account_status: ["ACTIVE", "PENDING", "SUSPENDED"],
       user_roles_type: ["VISITOR", "RENTER", "OWNER", "ADMINISTRATOR"],
     },
   },

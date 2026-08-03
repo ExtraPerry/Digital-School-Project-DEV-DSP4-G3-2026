@@ -17,12 +17,14 @@ type SiteHeaderAuthActionsProps = {
   isAuthenticated: boolean;
   firstName: string | null;
   isOwner: boolean;
+  isAdmin: boolean;
 };
 
 export function SiteHeaderAuthActions({
   isAuthenticated,
   firstName,
   isOwner,
+  isAdmin,
 }: SiteHeaderAuthActionsProps) {
   const t = useTranslations("Pages.LandingPage");
   const router = useRouter();
@@ -83,6 +85,14 @@ export function SiteHeaderAuthActions({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
+          {isAdmin ? (
+            <>
+              <DropdownMenuItem asChild>
+                <Link href="/admin">{t("nav_admin_space")}</Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          ) : null}
           <DropdownMenuItem asChild>
             <Link href="/profile">{t("nav_profile")}</Link>
           </DropdownMenuItem>

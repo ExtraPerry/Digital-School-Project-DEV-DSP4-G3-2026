@@ -16,7 +16,8 @@ const PUBLIC_ROUTES = [
   "/cookies",
 ] as const;
 const AUTHENTICATED_ROUTES = ["/owner", "/bookings", "/profile"] as const;
-const ADMIN_ROUTES = [] as const; // e.g. "/admin"
+// "/admin" prefix-matches every admin sub-page (see matchesRoute).
+const ADMIN_ROUTES = ["/admin"] as const;
 
 const intlMiddleware = createMiddleware(routing);
 

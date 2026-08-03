@@ -27,9 +27,8 @@ For product requirements, see [documentation/](documentation/).
 - **Owner space** (`/owner/*`): dashboard, boat CRUD, availability calendar, contractual documents upload, draft→published gating; self-serve `/become-owner` (RENTER→OWNER).
 - **Renter booking flow**: Stripe Checkout (test mode) via edge functions, booking history (`/bookings`), post-rental reviews tied to completed reservations, 10% platform commission recorded in DB.
 - **Account profile** (`/profile`): edit name/phone; past (COMPLETED) reservations with linked review; list of comments and ratings left by the user (role not shown).
+- **Admin back-office** (`/admin/*`): ADMINISTRATOR-gated back-office with the seven screens of the approved maquette — dashboard KPIs, users & roles (role assignment + account suspension), listing register, read-only reservation register, review moderation queue, payments & commissions, and an append-only admin action log.
 - Supabase clients, i18n, theme, TanStack Query provider, `useSupabaseRealtime`, domain hooks for users/boats/owner/booking data.
-
-Admin UI is **not yet implemented**.
 
 ---
 
@@ -82,9 +81,19 @@ src/
 │       │       ├── calendar/
 │       │       ├── documents/
 │       │       └── profile/
-│       └── (admin)/            # Admin-only routes (empty)
+│       └── (admin)/            # Admin-only routes (ADMINISTRATOR gated in layout)
+│           └── admin/
+│               ├── layout.tsx  # Role gate + admin shell (header, sidebar, footer)
+│               ├── page.tsx    # Dashboard
+│               ├── users/      # Users & roles
+│               ├── boats/      # Listing moderation
+│               ├── reservations/
+│               ├── moderation/ # Review moderation queue
+│               ├── commissions/
+│               └── security/   # Admin action log
 ├── components/
 │   ├── ui/                     # shadcn primitives
+│   ├── admin/                  # Admin shell + back-office feature components
 │   ├── auth/
 │   ├── boats/
 │   ├── bookings/               # Bookings list + leave-review dialog
@@ -223,6 +232,10 @@ Route groups do **not** appear in URLs. Every page must be registered explicitly
 
 **Current authenticated routes:** `/owner`, `/bookings`, `/profile`.
 
+**Current admin routes:** `/admin`. `matchesRoute` prefix-matches, so the single `/admin` entry covers every admin sub-page (`/admin/users`, `/admin/boats`, …) — do not add one entry per screen.
+
+**Defence in depth:** the proxy matcher excludes `/api` and short-circuits `/auth`, so proxy gating is not sufficient on its own. Every admin route re-checks the role server-side in `[src/app/[locale]/(admin)/admin/layout.tsx](src/app/[locale]/(admin)/admin/layout.tsx)` (unauthenticated → `/login`, non-ADMINISTRATOR → `/`), mirroring the owner layout.
+
 **Default deny:** paths not listed in any array redirect to `/{locale}` (home). When adding a page under `(public)`, `(authenticated)`, or `(admin)`, add its locale-stripped path (e.g. `/dashboard`, `/login`) to the matching array in the same change.
 
 All UI strings MUST use `next-intl` with keys in the `messages/` JSON files. Do not hardcode user-facing text.
@@ -296,6 +309,19 @@ Configured in `[src/contexts/tanstack-query-client.tsx](src/contexts/tanstack-qu
 - Calls `queryClient.invalidateQueries({ queryKey })` when matching DB events occur
 - Domain hooks pass their query keys per invocation; they do not implement Realtime subscriptions themselves
 - Use exported types (`RealtimeSubscription`, filter string format) so table/column names stay aligned with `[src/lib/supabase/database.types.ts](src/lib/supabase/database.types.ts)`
+- The `filter` field is **mandatory**. To subscribe to every row in a table, use the nil-UUID sentinel: `` filter: `id=neq.${NIL_UUID}` `` with `NIL_UUID` imported from `[src/constants/Realtime.ts](src/constants/Realtime.ts)`
+
+#### Realtime publication membership (important)
+
+A `useSupabaseRealtime` subscription only ever fires for tables that are members of the Postgres `supabase_realtime` publication. A subscription on an unpublished table connects successfully and then **silently never invalidates**.
+
+Current members: `reservation_messages`, `users`, `user_roles`, `boats`, `payment_transactions`.
+
+`postgres_changes` honours RLS — a subscriber receives a row only if their own SELECT policies permit reading it (verified: a RENTER does not receive other users' `public.users` changes, an ADMINISTRATOR does). Publishing a table therefore does not widen access, but it does mean **every table added to the publication must have a correct SELECT policy first**.
+
+`public.boat_reservations` is deliberately **excluded**: its only SELECT policy is `for select to anon, authenticated using (true)`, so publishing it would broadcast every booking (renter, dates, amount) to every connected client. Hooks reading reservations subscribe to `payment_transactions` instead and otherwise refresh on load / staleTime. Tightening that policy is tracked as separate work.
+
+When adding a table to the publication, do it in the migration that introduces the table (or its admin policies), and record it above.
 
 #### Auth cache updates
 
@@ -323,6 +349,15 @@ Auth-driven cache updates are **not** handled inside `useSupabaseRealtime`. When
 | `useBoatActiveReservations(boatId)` | `src/hooks/useBoatReservations.ts` | `["bookings", "boat", boatId]` |
 | `useMyReservations` | `src/hooks/useBoatReservations.ts` | `["bookings", "mine"]` |
 | `useReservationMessages(reservationId)` | `src/hooks/useReservationMessages.ts` | `["reservation-messages", reservationId]` |
+| `useAdminPlatformStats` | `src/hooks/useAdminPlatformStats.ts` | `["admin-stats"]` |
+| `useAdminUsers` | `src/hooks/useAdminUsers.ts` | `["admin-users"]` |
+| `useAdminBoats` | `src/hooks/useAdminBoats.ts` | `["admin-boats"]` |
+| `useAdminReservations` | `src/hooks/useAdminReservations.ts` | `["admin-reservations"]` |
+| `useAdminPayments` | `src/hooks/useAdminPayments.ts` | `["admin-payments"]` |
+| `useAdminAuditLog` | `src/hooks/useAdminAuditLog.ts` | `["admin-audit"]` |
+| `useAdminReviews` | `src/hooks/useAdminReviews.ts` | `["admin-reviews"]` |
+
+Each admin hook also exports a `ADMIN_*_QUERY_KEY_PREFIX` constant. Mutation hooks MUST import those constants rather than re-declaring key literals.
 
 **Implemented query functions:**
 
@@ -338,6 +373,13 @@ Auth-driven cache updates are **not** handled inside `useSupabaseRealtime`. When
 | `fetchBoatActiveReservations` / `fetchMyReservations` | `src/queries/fetchBoatReservations.ts` | Active boat bookings / renter history |
 | `fetchReservationMessages` | `src/queries/fetchReservationMessages.ts` | Chat messages for one reservation |
 | `fetchPorts` | `src/queries/fetchPorts.ts` | Port options for forms |
+| `fetchAdminPlatformStats` | `src/queries/fetchAdminPlatformStats.ts` | Calls `admin_platform_stats` RPC (dashboard KPIs) |
+| `fetchAdminUsers` | `src/queries/fetchAdminUsers.ts` | All users + role + `canBePromoted` (email & phone present) |
+| `fetchAdminBoats` | `src/queries/fetchAdminBoats.ts` | All boats incl. drafts, + owner and port |
+| `fetchAdminReservations` | `src/queries/fetchAdminReservations.ts` | All reservations + boat, renter and payment status |
+| `fetchAdminPayments` | `src/queries/fetchAdminPayments.ts` | Payment rows + computed commission totals |
+| `fetchAdminAuditLog` | `src/queries/fetchAdminAuditLog.ts` | Last 200 admin audit entries + actor |
+| `fetchAdminReviews` | `src/queries/fetchAdminReviews.ts` | All reviews + boat + reviewer, for moderation |
 
 **Implemented mutation hooks (non-Realtime):**
 
@@ -349,6 +391,7 @@ Auth-driven cache updates are **not** handled inside `useSupabaseRealtime`. When
 | `useSendReservationMessage` | `src/hooks/useReservationMessages.ts` | Inserts a chat message on a reservation |
 | `useMyReviews` | `src/hooks/useMyReviews.ts` | Reviews written by the current user |
 | `useOwnerMutations` (multiple) | `src/hooks/useOwnerMutations.ts` | Boat CRUD, slots, documents, upgrade-to-owner |
+| `useAdminSetUserRole` / `useAdminSetUserStatus` / `useAdminModerateReview` | `src/hooks/useAdminMutations.ts` | Call the admin RPCs; `mapAdminMutationError()` maps sentinel codes to translation keys |
 
 ### Edge functions
 
@@ -423,20 +466,43 @@ Local secrets for edge functions live in `supabase/functions/.env` (gitignored).
 | `public.user_roles` | Role enum: `VISITOR`, `RENTER`, `OWNER`, `ADMINISTRATOR` | Users can view own role (`GRANT` select to `authenticated`) |
 | `public.ports` | Rental ports (name, country) | Public SELECT |
 | `public.boats` | Boats listed for rental (`is_published` default false for new rows) | Public SELECT published + own; owner INSERT/UPDATE/DELETE |
-| `public.boat_reviews` | Reviews left by renters on boats (`reviewer_id`, optional unique `reservation_id`) | Public SELECT; authenticated INSERT for own COMPLETED reservation |
+| `public.boat_reviews` | Reviews left by renters on boats (`reviewer_id`, optional unique `reservation_id`, `moderation_status`/`moderated_at`/`moderated_by`) | **Two** permissive SELECT policies: `to anon, authenticated using (moderation_status <> 'REJECTED')` and an admin-only `to authenticated using (private.is_administrator())`. Authenticated INSERT for own COMPLETED reservation. **No UPDATE policy or grant** — moderation goes through `admin_moderate_review()` |
 | `public.boat_availability_time_slots` | Date windows when a boat is available | Public SELECT; owner write |
 | `public.boat_reservations` | Bookings with `status`; active ones block availability | Public SELECT; writes via service-role edge functions only |
 | `public.boat_equipment_links` | Junction: boat ↔ `boat_equipment` enum | Public SELECT |
 | `public.payment_transactions` | Stripe payment records per reservation (`commission_amount`, `owner_amount`) | Renter/owner/admin SELECT; writes service-role only |
 | `public.boat_media` | Public gallery images (`boat-images` bucket) | Public SELECT; owner/admin write |
 | `public.boat_documents` | Contractual docs (`boat-documents` bucket). `LICENSE`/`SAILOR_CV` are owner-level (`boat_id` null); `INSURANCE` is boat-scoped | Owner/admin only |
-| `public.reservation_messages` | Renter ↔ owner chat scoped to a reservation. In the `supabase_realtime` publication (the publication is otherwise empty, so other tables emit no `postgres_changes` events) | Participants (renter, boat owner, admin) SELECT/INSERT via `private.is_reservation_participant` |
+| `public.reservation_messages` | Renter ↔ owner chat scoped to a reservation | Participants (renter, boat owner, admin) SELECT/INSERT via `private.is_reservation_participant` |
+| `public.admin_audit_log` | Append-only trace of privileged admin actions (`actor_user_id` + `actor_email_snapshot`, `action`, `target_table`, `target_id`, `details` jsonb) | Admin SELECT only. **No INSERT/UPDATE/DELETE policy or grant exists at all** — rows are written solely by `private.record_admin_action()` running as SECURITY DEFINER, so an administrator cannot forge or erase history |
 
 Column additions: `boats.is_published` / `published_at` (publish gated by required documents), `ports.slug` (unique, kebab-case), `boat_reservations.status` / `total_amount` / `currency`, `payment_transactions.commission_amount` / `owner_amount`, `boat_reviews.reservation_id`.
 
-**Enums:** `boat_type` (`SAILBOAT`, `MOTORBOAT`, `CATAMARAN`, `YACHT`), `boat_skipper_option` (`INCLUDED`, `OPTIONAL`, `NONE`), `boat_equipment` (`GPS`, `SLEEPING_BERTHS`, `EQUIPPED_KITCHEN`), `reservation_status` (`PENDING`, `CONFIRMED`, `CANCELLED`, `COMPLETED`), `boat_document_type` (`INSURANCE`, `REGISTRATION`, `LICENSE`, `OTHER`, `SAILOR_CV`).
+**Enums:** `boat_type` (`SAILBOAT`, `MOTORBOAT`, `CATAMARAN`, `YACHT`), `boat_skipper_option` (`INCLUDED`, `OPTIONAL`, `NONE`), `boat_equipment` (`GPS`, `SLEEPING_BERTHS`, `EQUIPPED_KITCHEN`), `reservation_status` (`PENDING`, `CONFIRMED`, `CANCELLED`, `COMPLETED`), `boat_document_type` (`INSURANCE`, `REGISTRATION`, `LICENSE`, `OTHER`, `SAILOR_CV`), `user_account_status` (`ACTIVE`, `PENDING`, `SUSPENDED` — `PENDING` is reserved and nothing sets it), `admin_action_type` (`SET_USER_ROLE`, `SET_USER_STATUS`, `MODERATE_REVIEW`, `PUBLISH_BOAT`, `UNPUBLISH_BOAT`).
 
-**RPCs:** `search_available_boats(...)` — paginated boat search with availability/date filtering (only `is_published` boats; blocks on `PENDING`/`CONFIRMED` reservations); `get_boat_filter_bounds(p_port_name)` — returns min/max price and length for sidebar sliders; `upgrade_current_user_to_owner()` — promotes authenticated `RENTER` → `OWNER` (email+phone already enforced by role trigger).
+#### Admin write model (important)
+
+Administrators get **no direct DML policy** on `public.users` or `public.user_roles`. Every privileged mutation goes through a `SECURITY DEFINER` RPC that authorizes, enforces preconditions, and writes its own audit row in one transaction:
+
+| RPC | Guards |
+| --- | ------ |
+| `public.admin_set_user_role(p_user_id, p_role)` | Caller must be admin; refuses self-targeting (`ADMIN_ROLE_SELF_CHANGE`); pre-checks the email+phone rule and raises `ADMIN_ROLE_PRECONDITION_CONTACT` so the UI can translate it instead of surfacing the raw `check_role_requirements` message. No status precondition on the target — demoting a suspended account must stay possible. |
+| `public.admin_set_user_status(p_user_id, p_status)` | Caller must be admin; refuses self-targeting (`ADMIN_STATUS_SELF_CHANGE`) because that would be an unrecoverable lockout; on `SUSPENDED` it also unpublishes every boat owned by the target in the same transaction. |
+| `public.admin_moderate_review(p_review_id, p_status)` | Caller must be admin; sets `moderation_status`/`moderated_at`/`moderated_by` and writes an audit row. `REJECTED` hides the review from non-admins and drops it from `boats.rating`; `FLAGGED` is triage only and stays publicly visible. |
+
+**Review moderation is POST-moderation:** a review publishes the instant the renter submits it (unchanged behaviour) and `moderation_status` defaults to `APPROVED`, so no existing row changes visibility.
+
+**Why two SELECT policies on `boat_reviews` instead of one OR-ed expression:** `private.is_administrator()` has EXECUTE revoked from `anon`. Naming it inside a policy that applies `to anon` risks `permission denied for function is_administrator` on public boat pages. Permissive policies are OR-ed by Postgres, so splitting keeps the anonymous path from ever referencing the helper. Apply the same rule to any future anon-facing policy.
+
+**PostgREST embed hint required:** `boat_reviews` now has two FKs to `public.users` (`reviewer_id`, `moderated_by`), so a bare `users(...)` embed fails with `PGRST201`. Use `users!boat_reviews_reviewer_id_fkey(...)`.
+
+`private.is_administrator()` requires `role = 'ADMINISTRATOR'` **and** `account_status = 'ACTIVE'`, so suspending an administrator actually removes their power.
+
+**Column-scoped grant:** `authenticated` holds `UPDATE (first_name, last_name, phone)` on `public.users` — **not** table-wide UPDATE. Postgres has no per-column RLS, so without this narrowing a suspended member could PATCH `account_status` back to `ACTIVE` themselves. If a new self-service profile field is added, extend this grant in the same migration or the write will fail.
+
+**Admin access:** migration `20260803030811` adds permissive SELECT policies `"Admins can view all users"` and `"Admins can view all user roles"` (both `private.is_administrator()`), leaving the existing own-row policies untouched. Admin **write** access to `public.users` / `public.user_roles` is deliberately NOT opened — role and status changes go through SECURITY DEFINER RPCs so they are guarded and audited in one place.
+
+**RPCs:** `admin_platform_stats()` — administrator-only dashboard KPIs (members, live listings, bookings this month, commission this month); `plpgsql` with an explicit `raise ... errcode 42501` guard rather than a WHERE predicate, because an aggregate-only query with a WHERE guard returns a row of zeros to a non-admin instead of failing; `search_available_boats(...)` — paginated boat search with availability/date filtering (only `is_published` boats; blocks on `PENDING`/`CONFIRMED` reservations); `get_boat_filter_bounds(p_port_name)` — returns min/max price and length for sidebar sliders; `upgrade_current_user_to_owner()` — promotes authenticated `RENTER` → `OWNER` (email+phone already enforced by role trigger).
 
 **Constraints:** `boat_reservations_no_overlap` — `btree_gist` exclusion constraint preventing overlapping active (`PENDING`/`CONFIRMED`) reservations on the same boat. Unique partial indexes: one `LICENSE` and one `SAILOR_CV` per owner; one `INSURANCE` per boat. Unique `boat_reviews.reservation_id` (one review per rental).
 
@@ -449,8 +515,10 @@ Triggers: timestamp enforcement, role requirements (email + phone for elevated r
 After any migration, regenerate types:
 
 ```bash
-npx supabase gen types typescript --schema public > src/lib/supabase/database.types.ts
+npx supabase gen types typescript --local --schema public > src/lib/supabase/database.types.ts
 ```
+
+> `--local` is required by Supabase CLI v2 (it also accepts `--linked` / `--project-id` / `--db-url`). Without it the command fails **and the shell redirect still truncates `database.types.ts` to the error JSON** — check `git diff` after regenerating.
 
 > **Note:** [README.md](README.md) references `supabase/database.types.ts`. The canonical path in this project is `src/lib/supabase/database.types.ts`.
 
@@ -466,6 +534,7 @@ Use the modular files in `[supabase/seeds/](supabase/seeds/)` for **local testin
   - `05_demo_documents.sql` — owner LICENSE/SAILOR_CV + boat INSURANCE metadata (Horizon has no insurance)
   - `06_demo_reservations.sql` — `payment_transactions` with commission split for seeded reservations
   - `07_demo_messages.sql` — chat messages between Léa and the owner on her upcoming reservation
+  - `08_demo_admin.sql` — admin fixtures: Chloé Dubois (VISITOR **with** email+phone, so the promote flow has a working happy path — Thomas Petit deliberately has no phone and demos the blocked path), one SUSPENDED account, and two audit rows
 - No orchestrator file: psql meta-commands (`\i`, `\ir`) are not supported by the CLI seed runner. Do not add an aggregator; the glob handles ordering.
 - Seeds are **idempotent** (fixed UUIDs + `ON CONFLICT DO NOTHING`) and use **relative dates** (`current_date + ...`) so they stay valid over time.
 - `auth.identities` rows (provider `email`) are required for reliable local password login.
@@ -537,6 +606,23 @@ Obtain local values via `npx supabase status` after `npx supabase start`.
 6. Copy env vars from `npx supabase status` into `.env`
 7. `npm run dev`
 
+**Verifying a change** (run all four before calling work done):
+
+```bash
+npx supabase db reset     # migrations + seeds apply cleanly from scratch
+npx tsc --noEmit          # must be empty
+npm run lint              # must not exceed the known baseline
+npm run build             # must compile
+```
+
+Baseline lint debt (pre-existing, do not treat as regressions): 3 errors + 3 warnings — `no-explicit-any` in both edge functions, `set-state-in-effect` in `cookie-consent-banner.tsx`, and 3 unused vars under `src/components/search/`.
+
+To check `messages/en.json` / `messages/fr.json` key parity:
+
+```bash
+node -e "const e=require('./messages/en.json'),f=require('./messages/fr.json');const k=(o,p='')=>Object.entries(o).flatMap(([a,v])=>v&&typeof v==='object'?k(v,p+a+'.'):[p+a]);console.log(JSON.stringify(k(e).sort())===JSON.stringify(k(f).sort()))"
+```
+
 **Local testing with seed data:** update files under `[supabase/seeds/](supabase/seeds/)`, then run `npx supabase db reset` to apply migrations and seed in one step. Use this to get a repeatable local dataset for development and manual testing. Demo owner login: `marc.thevenot@example.com` / `Sailing2026!`.
 
 ---
@@ -548,7 +634,12 @@ Do **not** assume these exist. Build them when needed, following the conventions
 
 | Gap                   | Location / notes                                                                                        |
 | --------------------- | ------------------------------------------------------------------------------------------------------- |
-| Empty admin routes    | `(admin)` has no pages yet                                                                              |
+| Admin listing take-down | `/admin/boats` lists every boat including drafts but is read-only. Unpublishing another owner's listing needs a `public.admin_set_boat_published()` SECURITY DEFINER RPC (so the action is audited); the `PUBLISH_BOAT` / `UNPUBLISH_BOAT` audit enum members are declared but unused |
+| Admin reservation actions | `/admin/reservations` is read-only by design: no cancellation or refund path exists anywhere on the platform, `payment_transactions` has no `REFUNDED` status and there is no Stripe refund call |
+| Platform settings screen | In the G.4 wireframe, dropped in the later G.5 maquette. The only real configurable value is the 10% commission, a hardcoded constant in `supabase/functions/create-booking-checkout/index.ts` |
+| Suspension does not block login | `admin_set_user_status` removes privileges and unpublishes listings, but cannot end a session or prevent re-login — that needs the Supabase Auth Admin API |
+| `boat_reservations` PII exposure | Its only SELECT policy is `for select to anon, authenticated using (true)`, so any anonymous visitor can read every booking. Pre-existing; it is also why the table is kept out of the Realtime publication. Fixing it breaks the public availability calendar, so it needs its own design pass |
+| Low-contrast coral on small text | `#D68A6E` on white is ≈3:1, below the WCAG AA 4.5:1 floor for small text. Used for action links across the owner space, landing page and admin. Fine on filled buttons (white on coral); a palette fix is a cross-cutting change |
 | No boat image uploads | `boat-images` bucket + `boat_media` table exist and are seeded with placeholder paths; no upload UI and no actual files uploaded yet |
 | No owner reservations page | Dashboard reservation/revenue/occupancy stats are placeholders until an owner bookings view lands  |
 | No Stripe Connect     | Commission is recorded in DB only (Checkout test mode); no owner payout onboarding                      |

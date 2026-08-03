@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Supabase CLI local state written by `npx supabase start` (gitignored).
+    // Contains a minified bundle that would otherwise produce ~150 bogus errors.
+    "supabase/.temp/**",
   ]),
 ]);
 
