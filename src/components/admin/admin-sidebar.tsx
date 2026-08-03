@@ -15,6 +15,7 @@ import {
 import { cn } from "@/lib/utils";
 import createSupabaseBrowserClient from "@/lib/supabase/createSupabaseBrowserClient";
 import { useRouter } from "@/i18n/navigation";
+import { useAdminFlaggedReviewCount } from "@/hooks/useAdminFlaggedReviewCount";
 
 const NAV_ITEMS = [
   { href: "/admin", labelKey: "nav_dashboard", icon: LayoutDashboard },
@@ -38,6 +39,7 @@ export function AdminSidebar() {
   const t = useTranslations("Pages.AdminSpace");
   const pathname = usePathname();
   const router = useRouter();
+  const { data: flaggedCount = 0 } = useAdminFlaggedReviewCount();
 
   async function handleSignOut() {
     const supabase = createSupabaseBrowserClient();
@@ -75,7 +77,17 @@ export function AdminSidebar() {
               href={item.href}
             >
               <Icon aria-hidden className="size-4" />
-              {t(item.labelKey)}
+              <span className="flex-1">{t(item.labelKey)}</span>
+              {item.href === "/admin/moderation" && flaggedCount > 0 ? (
+                <span
+                  aria-label={t("moderation_badge_label", {
+                    count: flaggedCount,
+                  })}
+                  className="rounded-full bg-[#D68A6E] px-1.5 py-0.5 text-[11px] leading-none font-semibold text-white"
+                >
+                  {flaggedCount}
+                </span>
+              ) : null}
             </Link>
           );
         })}

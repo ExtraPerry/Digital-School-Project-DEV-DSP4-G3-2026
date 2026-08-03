@@ -34,7 +34,7 @@ export default async function AdminUsersPage({
       </div>
 
       <div className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm">
-        <AdminUsersTable showActions />
+        <AdminUsersTable showActions showToolbar />
       </div>
     </div>
   );

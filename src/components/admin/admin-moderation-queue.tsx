@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Info, Star } from "lucide-react";
@@ -14,6 +14,14 @@ import {
 } from "@/hooks/useAdminMutations";
 import { Database } from "@/lib/supabase/database.types";
 import { cn } from "@/lib/utils";
+import { AdminTableToolbar } from "@/components/admin/admin-table-toolbar";
+import { AdminPagination } from "@/components/admin/admin-pagination";
+import { useAdminFilters } from "@/components/admin/use-admin-filters";
+import {
+  DEFAULT_ADMIN_REVIEWS_FILTERS,
+  type AdminReviewsFilters,
+  type AdminReviewsSortColumn,
+} from "@/queries/fetchAdminReviews";
 
 type ModerationStatus = Database["public"]["Enums"]["review_moderation_status"];
 
@@ -29,35 +37,30 @@ const STATUS_BADGE_CLASSES: Record<ModerationStatus, string> = {
   REJECTED: "bg-red-100 text-red-700 hover:bg-red-100",
 };
 
-const FILTERS = [
-  { value: "ALL", labelKey: "moderation_filter_all" },
+const STATUS_OPTIONS = [
+  { value: "ALL", labelKey: "filter_all" },
   { value: "APPROVED", labelKey: "moderation_filter_approved" },
   { value: "FLAGGED", labelKey: "moderation_filter_flagged" },
   { value: "REJECTED", labelKey: "moderation_filter_rejected" },
 ] as const;
 
-type FilterValue = (typeof FILTERS)[number]["value"];
-
 export function AdminModerationQueue({ limit }: { limit?: number }) {
   const t = useTranslations("Pages.AdminSpace");
   const locale = useLocale();
-  const { data: reviews = [], isLoading, isError } = useAdminReviews();
+  const { filters, setSearch, setPage, setFilterValue } = useAdminFilters<
+    AdminReviewsSortColumn,
+    AdminReviewsFilters
+  >(DEFAULT_ADMIN_REVIEWS_FILTERS);
+  const { data, isLoading, isError } = useAdminReviews(filters);
   const moderateReview = useAdminModerateReview();
-  const [filter, setFilter] = useState<FilterValue>("ALL");
 
   const dateFormatter = useMemo(
     () => new Intl.DateTimeFormat(locale, { dateStyle: "medium" }),
     [locale],
   );
 
-  const filtered = useMemo(() => {
-    const matching =
-      filter === "ALL"
-        ? reviews
-        : reviews.filter((review) => review.moderation_status === filter);
-
-    return limit ? matching.slice(0, limit) : matching;
-  }, [reviews, filter, limit]);
+  const reviews = data?.rows ?? [];
+  const filtered = limit ? reviews.slice(0, limit) : reviews;
 
   async function moderate(reviewId: string, status: ModerationStatus) {
     try {
@@ -87,36 +90,27 @@ export function AdminModerationQueue({ limit }: { limit?: number }) {
             {t("moderation_intro")}
           </p>
 
-          <div
-            aria-label={t("moderation_filter_group_label")}
-            className="flex flex-wrap gap-2"
-            role="group"
-          >
-            {FILTERS.map((option) => (
-              <Button
-                key={option.value}
-                aria-pressed={filter === option.value}
-                className={cn(
-                  "h-8 rounded-full border-neutral-200",
-                  filter === option.value
-                    ? "bg-[#1a2b48] text-white hover:bg-[#1a2b48]"
-                    : "text-[#1a2b48]",
-                )}
-                onClick={() => setFilter(option.value)}
-                size="sm"
-                type="button"
-                variant={filter === option.value ? "default" : "outline"}
-              >
-                {t(option.labelKey)}
-              </Button>
-            ))}
-          </div>
+          <AdminTableToolbar
+            filters={[
+              {
+                id: "admin-reviews-status",
+                labelKey: "moderation_filter_status",
+                value: filters.status,
+                options: STATUS_OPTIONS,
+                onChange: (value) => setFilterValue("status", value),
+              },
+            ]}
+            onSearchChange={setSearch}
+            resultCount={data?.total ?? null}
+            search={filters.search}
+            searchPlaceholderKey="moderation_search_placeholder"
+          />
         </>
       )}
 
       {filtered.length === 0 ? (
         <p className="text-sm text-neutral-500">
-          {reviews.length === 0 ? t("empty") : t("moderation_empty_filtered")}
+          {data && data.total === 0 ? t("moderation_empty_filtered") : t("empty")}
         </p>
       ) : (
         <ul className="flex flex-col gap-3">
@@ -223,6 +217,14 @@ export function AdminModerationQueue({ limit }: { limit?: number }) {
             </li>
           ))}
         </ul>
+      )}
+
+      {limit ? null : (
+        <AdminPagination
+          onPageChange={setPage}
+          page={data?.page ?? 1}
+          pageCount={data?.pageCount ?? 1}
+        />
       )}
     </div>
   );

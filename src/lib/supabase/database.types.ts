@@ -610,6 +610,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_global_search: {
+        Args: { p_limit?: number; p_query: string }
+        Returns: {
+          entity_id: string
+          entity_type: string
+          subtitle: string
+          title: string
+        }[]
+      }
       admin_moderate_review: {
         Args: {
           p_review_id: string
@@ -644,6 +653,37 @@ export type Database = {
           reservations_this_month: number
           total_users: number
         }[]
+      }
+      admin_set_boat_published: {
+        Args: { p_boat_id: string; p_is_published: boolean }
+        Returns: {
+          badge: string | null
+          capacity: number
+          created_at: string
+          deposit_amount: number
+          description: string | null
+          draft_m: number
+          id: string
+          is_published: boolean
+          length_m: number
+          motorization: string | null
+          name: string
+          owner_id: string | null
+          port_id: string
+          price_per_day: number
+          published_at: string | null
+          rating: number
+          skipper_option: Database["public"]["Enums"]["boat_skipper_option"]
+          type: Database["public"]["Enums"]["boat_type"]
+          updated_at: string
+          width_m: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "boats"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       admin_set_user_role: {
         Args: {
@@ -728,6 +768,8 @@ export type Database = {
           type: Database["public"]["Enums"]["boat_type"]
         }[]
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       unaccent: { Args: { "": string }; Returns: string }
       upgrade_current_user_to_owner: {
         Args: never

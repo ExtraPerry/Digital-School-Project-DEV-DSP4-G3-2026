@@ -8,6 +8,8 @@ import { ADMIN_BOATS_QUERY_KEY_PREFIX } from "@/hooks/useAdminBoats";
 import { ADMIN_STATS_QUERY_KEY_PREFIX } from "@/hooks/useAdminPlatformStats";
 import { ADMIN_AUDIT_QUERY_KEY_PREFIX } from "@/hooks/useAdminAuditLog";
 import { ADMIN_REVIEWS_QUERY_KEY_PREFIX } from "@/hooks/useAdminReviews";
+import { ADMIN_PAYMENT_TOTALS_QUERY_KEY_PREFIX } from "@/hooks/useAdminPaymentTotals";
+import { ADMIN_FLAGGED_REVIEWS_QUERY_KEY_PREFIX } from "@/hooks/useAdminFlaggedReviewCount";
 import { BOATS_LIST_QUERY_KEY_PREFIX } from "@/hooks/useBoats";
 
 type UserRoleType = Database["public"]["Enums"]["user_roles_type"];
@@ -22,6 +24,8 @@ export type AdminMutationErrorKey =
   | "admin_error_self_change"
   | "admin_error_user_not_found"
   | "admin_error_review_not_found"
+  | "admin_error_boat_not_found"
+  | "admin_error_publish_requirements"
   | "admin_error_forbidden"
   | "admin_error_generic";
 
@@ -45,6 +49,20 @@ export function mapAdminMutationError(message: string): AdminMutationErrorKey {
     return "admin_error_review_not_found";
   }
 
+  if (message.includes("ADMIN_BOAT_NOT_FOUND")) {
+    return "admin_error_boat_not_found";
+  }
+
+  //? Raised by enforce_boat_publish_requirements() when an administrator tries
+  //? to republish a listing whose owner is missing a required document.
+  if (
+    message.includes("LICENSE") ||
+    message.includes("SAILOR_CV") ||
+    message.includes("INSURANCE")
+  ) {
+    return "admin_error_publish_requirements";
+  }
+
   if (message.includes("Only administrators")) {
     return "admin_error_forbidden";
   }
@@ -66,6 +84,8 @@ function useInvalidateAdminCaches() {
         ADMIN_STATS_QUERY_KEY_PREFIX,
         ADMIN_AUDIT_QUERY_KEY_PREFIX,
         ADMIN_REVIEWS_QUERY_KEY_PREFIX,
+        ADMIN_PAYMENT_TOTALS_QUERY_KEY_PREFIX,
+        ADMIN_FLAGGED_REVIEWS_QUERY_KEY_PREFIX,
         BOATS_LIST_QUERY_KEY_PREFIX,
       ].map((prefix) =>
         queryClient.invalidateQueries({ queryKey: [prefix] }),
@@ -150,6 +170,34 @@ export function useAdminModerateReview() {
 
       if (error || !data) {
         throw new Error(error?.message ?? "Failed to moderate review");
+      }
+
+      return data;
+    },
+    onSuccess: invalidateAdminCaches,
+  });
+}
+
+export function useAdminSetBoatPublished() {
+  const invalidateAdminCaches = useInvalidateAdminCaches();
+
+  return useMutation({
+    mutationFn: async ({
+      boatId,
+      isPublished,
+    }: {
+      boatId: string;
+      isPublished: boolean;
+    }) => {
+      const supabase = createSupabaseBrowserClient();
+
+      const { data, error } = await supabase.rpc("admin_set_boat_published", {
+        p_boat_id: boatId,
+        p_is_published: isPublished,
+      });
+
+      if (error || !data) {
+        throw new Error(error?.message ?? "Failed to update listing");
       }
 
       return data;

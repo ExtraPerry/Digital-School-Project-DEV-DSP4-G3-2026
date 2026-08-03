@@ -327,6 +327,19 @@ When adding a table to the publication, do it in the migration that introduces t
 
 Auth-driven cache updates are **not** handled inside `useSupabaseRealtime`. When a domain hook needs auth-aware cache behavior, add it in the domain hook itself. Reference patterns: `[src/hooks/useCurrentUser.ts](src/hooks/useCurrentUser.ts)` and `[src/hooks/useCurrentUserRole.ts](src/hooks/useCurrentUserRole.ts)` use `supabase.auth.onAuthStateChange` to `setQueryData(null)` on `SIGNED_OUT` and `invalidateQueries` on `SIGNED_IN`, `TOKEN_REFRESHED`, or `USER_UPDATED`.
 
+#### Admin list screens: server-side filtering
+
+Admin tables filter, sort and paginate **server-side through PostgREST**, not in the browser — `.or()` + `.ilike` for search, `.eq()` for filters, `.order()` for sorting, `.range()` + `{ count: "exact" }` for pagination. No per-screen RPC is needed because the admin SELECT policies already scope the rows.
+
+- Shared types and helpers live in `[src/types/AdminList.ts](src/types/AdminList.ts)`: `AdminListParams`, `PaginatedAdminList`, `pageToRange()`, `buildPaginatedResult()`, `sanitizeSearchTerm()`.
+- `sanitizeSearchTerm()` strips `,` `(` `)` because PostgREST parses `.or()` as a comma-separated list — an unescaped comma in a user's search term corrupts the filter expression.
+- Filtering on an **embedded** table requires `!inner`, otherwise PostgREST returns the parent row with a null embed instead of excluding it.
+- PostgREST **cannot order a parent table by an embedded column**, so each screen exports an explicit `ADMIN_*_SORT_COLUMNS` tuple of own columns only. Do not add a sortable header for a joined field.
+- Filters are part of the query key (`build<Domain>QueryKey(filters)`), so each combination caches independently — same convention as `buildBoatsQueryKey`.
+- Shared UI: `admin-table-toolbar.tsx` (debounced search + filter selects + result count), `admin-sortable-header.tsx` (sets `aria-sort`), `admin-pagination.tsx`, and the `use-admin-filters.ts` state controller (any non-paging change resets to page 1).
+- GIN **trigram** indexes back the ILIKE lookups (`pg_trgm`, migration `20260803044428`). Add one for any new searchable text column.
+- Summary figures that must reflect the whole dataset (e.g. commission totals) use a **separate hook**, so they do not change while paging a filtered table.
+
 #### Query-key naming convention
 
 - Export query-key constants from the domain hook file (e.g. `CURRENT_USER_QUERY_KEY = ["current-user"] as const`, `CURRENT_USER_ROLE_QUERY_KEY = ["current-user-role"] as const`)
@@ -350,12 +363,15 @@ Auth-driven cache updates are **not** handled inside `useSupabaseRealtime`. When
 | `useMyReservations` | `src/hooks/useBoatReservations.ts` | `["bookings", "mine"]` |
 | `useReservationMessages(reservationId)` | `src/hooks/useReservationMessages.ts` | `["reservation-messages", reservationId]` |
 | `useAdminPlatformStats` | `src/hooks/useAdminPlatformStats.ts` | `["admin-stats"]` |
-| `useAdminUsers` | `src/hooks/useAdminUsers.ts` | `["admin-users"]` |
-| `useAdminBoats` | `src/hooks/useAdminBoats.ts` | `["admin-boats"]` |
-| `useAdminReservations` | `src/hooks/useAdminReservations.ts` | `["admin-reservations"]` |
-| `useAdminPayments` | `src/hooks/useAdminPayments.ts` | `["admin-payments"]` |
+| `useAdminUsers(filters)` | `src/hooks/useAdminUsers.ts` | `["admin-users", "list", filters]` |
+| `useAdminBoats(filters)` | `src/hooks/useAdminBoats.ts` | `["admin-boats", "list", filters]` |
+| `useAdminReservations(filters)` | `src/hooks/useAdminReservations.ts` | `["admin-reservations", "list", filters]` |
+| `useAdminPayments(filters)` | `src/hooks/useAdminPayments.ts` | `["admin-payments", "list", filters]` |
 | `useAdminAuditLog` | `src/hooks/useAdminAuditLog.ts` | `["admin-audit"]` |
-| `useAdminReviews` | `src/hooks/useAdminReviews.ts` | `["admin-reviews"]` |
+| `useAdminReviews(filters)` | `src/hooks/useAdminReviews.ts` | `["admin-reviews", "list", filters]` |
+| `useAdminFlaggedReviewCount` | `src/hooks/useAdminFlaggedReviewCount.ts` | `["admin-flagged-reviews"]` |
+| `useAdminPaymentTotals` | `src/hooks/useAdminPaymentTotals.ts` | `["admin-payment-totals"]` |
+| `useAdminGlobalSearch(query)` | `src/hooks/useAdminGlobalSearch.ts` | `["admin-global-search", query]` |
 
 Each admin hook also exports a `ADMIN_*_QUERY_KEY_PREFIX` constant. Mutation hooks MUST import those constants rather than re-declaring key literals.
 
@@ -391,7 +407,7 @@ Each admin hook also exports a `ADMIN_*_QUERY_KEY_PREFIX` constant. Mutation hoo
 | `useSendReservationMessage` | `src/hooks/useReservationMessages.ts` | Inserts a chat message on a reservation |
 | `useMyReviews` | `src/hooks/useMyReviews.ts` | Reviews written by the current user |
 | `useOwnerMutations` (multiple) | `src/hooks/useOwnerMutations.ts` | Boat CRUD, slots, documents, upgrade-to-owner |
-| `useAdminSetUserRole` / `useAdminSetUserStatus` / `useAdminModerateReview` | `src/hooks/useAdminMutations.ts` | Call the admin RPCs; `mapAdminMutationError()` maps sentinel codes to translation keys |
+| `useAdminSetUserRole` / `useAdminSetUserStatus` / `useAdminModerateReview` / `useAdminSetBoatPublished` | `src/hooks/useAdminMutations.ts` | Call the admin RPCs; `mapAdminMutationError()` maps sentinel codes to translation keys |
 
 ### Edge functions
 
@@ -488,6 +504,7 @@ Administrators get **no direct DML policy** on `public.users` or `public.user_ro
 | --- | ------ |
 | `public.admin_set_user_role(p_user_id, p_role)` | Caller must be admin; refuses self-targeting (`ADMIN_ROLE_SELF_CHANGE`); pre-checks the email+phone rule and raises `ADMIN_ROLE_PRECONDITION_CONTACT` so the UI can translate it instead of surfacing the raw `check_role_requirements` message. No status precondition on the target — demoting a suspended account must stay possible. |
 | `public.admin_set_user_status(p_user_id, p_status)` | Caller must be admin; refuses self-targeting (`ADMIN_STATUS_SELF_CHANGE`) because that would be an unrecoverable lockout; on `SUSPENDED` it also unpublishes every boat owned by the target in the same transaction. |
+| `public.admin_set_boat_published(p_boat_id, p_is_published)` | Caller must be admin. Unpublishing is unconditional; republishing still re-runs `enforce_boat_publish_requirements` (owner LICENSE + SAILOR_CV + boat INSURANCE) and its exception propagates so the UI can explain the refusal. |
 | `public.admin_moderate_review(p_review_id, p_status)` | Caller must be admin; sets `moderation_status`/`moderated_at`/`moderated_by` and writes an audit row. `REJECTED` hides the review from non-admins and drops it from `boats.rating`; `FLAGGED` is triage only and stays publicly visible. |
 
 **Review moderation is POST-moderation:** a review publishes the instant the renter submits it (unchanged behaviour) and `moderation_status` defaults to `APPROVED`, so no existing row changes visibility.
@@ -502,7 +519,7 @@ Administrators get **no direct DML policy** on `public.users` or `public.user_ro
 
 **Admin access:** migration `20260803030811` adds permissive SELECT policies `"Admins can view all users"` and `"Admins can view all user roles"` (both `private.is_administrator()`), leaving the existing own-row policies untouched. Admin **write** access to `public.users` / `public.user_roles` is deliberately NOT opened — role and status changes go through SECURITY DEFINER RPCs so they are guarded and audited in one place.
 
-**RPCs:** `admin_platform_stats()` — administrator-only dashboard KPIs (members, live listings, bookings this month, commission this month); `plpgsql` with an explicit `raise ... errcode 42501` guard rather than a WHERE predicate, because an aggregate-only query with a WHERE guard returns a row of zeros to a non-admin instead of failing; `search_available_boats(...)` — paginated boat search with availability/date filtering (only `is_published` boats; blocks on `PENDING`/`CONFIRMED` reservations); `get_boat_filter_bounds(p_port_name)` — returns min/max price and length for sidebar sliders; `upgrade_current_user_to_owner()` — promotes authenticated `RENTER` → `OWNER` (email+phone already enforced by role trigger).
+**RPCs:** `admin_global_search(p_query, p_limit)` — cross-entity admin lookup (users, boats, reviews) backing the header search field; `admin_platform_stats()` — administrator-only dashboard KPIs (members, live listings, bookings this month, commission this month); `plpgsql` with an explicit `raise ... errcode 42501` guard rather than a WHERE predicate, because an aggregate-only query with a WHERE guard returns a row of zeros to a non-admin instead of failing; `search_available_boats(...)` — paginated boat search with availability/date filtering (only `is_published` boats; blocks on `PENDING`/`CONFIRMED` reservations); `get_boat_filter_bounds(p_port_name)` — returns min/max price and length for sidebar sliders; `upgrade_current_user_to_owner()` — promotes authenticated `RENTER` → `OWNER` (email+phone already enforced by role trigger).
 
 **Constraints:** `boat_reservations_no_overlap` — `btree_gist` exclusion constraint preventing overlapping active (`PENDING`/`CONFIRMED`) reservations on the same boat. Unique partial indexes: one `LICENSE` and one `SAILOR_CV` per owner; one `INSURANCE` per boat. Unique `boat_reviews.reservation_id` (one review per rental).
 
@@ -634,7 +651,6 @@ Do **not** assume these exist. Build them when needed, following the conventions
 
 | Gap                   | Location / notes                                                                                        |
 | --------------------- | ------------------------------------------------------------------------------------------------------- |
-| Admin listing take-down | `/admin/boats` lists every boat including drafts but is read-only. Unpublishing another owner's listing needs a `public.admin_set_boat_published()` SECURITY DEFINER RPC (so the action is audited); the `PUBLISH_BOAT` / `UNPUBLISH_BOAT` audit enum members are declared but unused |
 | Admin reservation actions | `/admin/reservations` is read-only by design: no cancellation or refund path exists anywhere on the platform, `payment_transactions` has no `REFUNDED` status and there is no Stripe refund call |
 | Platform settings screen | In the G.4 wireframe, dropped in the later G.5 maquette. The only real configurable value is the 10% commission, a hardcoded constant in `supabase/functions/create-booking-checkout/index.ts` |
 | Suspension does not block login | `admin_set_user_status` removes privileges and unpublishes listings, but cannot end a session or prevent re-login — that needs the Supabase Auth Admin API |

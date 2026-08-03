@@ -3,6 +3,7 @@ import createSupabaseServerClient from "@/lib/supabase/createSupabaseServerClien
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
+import { AdminGlobalSearch } from "@/components/admin/admin-global-search";
 
 export default async function AdminLayout({
   children,
@@ -37,6 +38,11 @@ export default async function AdminLayout({
   return (
     <div className="admin-space flex min-h-screen flex-col bg-[#f4f6f9] text-[#1a2b48]">
       <SiteHeader />
+      <div className="bg-[#22375a] px-6 py-3">
+        <div className="mx-auto flex max-w-6xl justify-end">
+          <AdminGlobalSearch />
+        </div>
+      </div>
       <div className="flex min-h-0 flex-1">
         <AdminSidebar />
         <main className="min-w-0 flex-1 overflow-auto">{children}</main>
