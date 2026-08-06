@@ -56,6 +56,8 @@ npm run seed:media
 npm run dev
 ```
 
+> **`.env` is not branch-scoped.** Git does not track it, so checking out `main` after working here leaves the app still pointing at the hosted project — and `main` is developed against the local stack. Swap `.env` back to the `npx supabase status` values when you switch, or keep the two environments in separate clones.
+
 `npx supabase start` is **not** used on this branch — nothing runs in Docker. What follows from that:
 
 - `supabase/seeds/*.sql` never run against the hosted project (`db push` applies migrations only). The hosted dataset is whatever is already there; `npm run seed:media` is the one fixture step that is safe and idempotent to re-run against it, because it only touches `boat_media` and the `boat-images` bucket.
