@@ -89,9 +89,9 @@ Tous les comptes de démonstration partagent le mot de passe **`Sailing2026!`** 
 
 **Team Members / Membres de l'équipe**:
 
-- Pierre GERVAIS (MerciMister)
-- Eduardo GAGLIARDI (MerciMister)
-- Lucas Dias (Heaven Agency)
+- Pierre GERVAIS
+- Eduardo GAGLIARDI
+- Lucas Dias
 
 ---
 
@@ -99,9 +99,9 @@ Tous les comptes de démonstration partagent le mot de passe **`Sailing2026!`** 
 
 ## 🛠️ Technology Stack / Stack Technique
 
-- **Framework**: TBD...
-- **Frontend**: TBD...
-- **Backend**: TBD...
+- **Framework**: Next.js
+- **Frontend**: React, Tailwindcss, Tanstack-Query, Tanstack-Form, Zod, Next-Intl
+- **Backend**: Supabase
 - **Version Control**: Git, GitHub
 - **Project Management**: Trello
 
