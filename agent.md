@@ -677,6 +677,23 @@ To check `messages/en.json` / `messages/fr.json` key parity:
 node -e "const e=require('./messages/en.json'),f=require('./messages/fr.json');const k=(o,p='')=>Object.entries(o).flatMap(([a,v])=>v&&typeof v==='object'?k(v,p+a+'.'):[p+a]);console.log(JSON.stringify(k(e).sort())===JSON.stringify(k(f).sort()))"
 ```
 
+### Hosted environment (branch `lucaslive`)
+
+`lucaslive` points the application at the hosted Supabase project instead of the local Docker stack. **It carries no application-code divergence from `main`** — every Supabase reference resolves from `NEXT_PUBLIC_SUPABASE_URL` / the key variables, so the environment switch lives entirely in `.env`. Keep it that way: if a change would need a branch-specific code path to work against a hosted project, the change is wrong.
+
+Consequences worth knowing before working on that branch:
+
+| | Local (`main`) | Hosted (`lucaslive`) |
+| --- | --- | --- |
+| Stack | `npx supabase start` (Docker) | none — hosted project |
+| Schema | `npx supabase db reset` | `npx supabase link` + `npx supabase db push` |
+| SQL fixtures | `supabase/seeds/*.sql` run on reset | **never run** — `db push` applies migrations only |
+| Listing photography | `npm run seed:media` | `npm run seed:media` (same command, same idempotency) |
+| `next/image` local-IP exception | on | off (switches itself by hostname) |
+| Edge functions | `npx supabase functions serve` | `npx supabase functions deploy` + project secrets |
+
+See the runbook in [README.md](README.md).
+
 **Local testing with seed data:** update files under `[supabase/seeds/](supabase/seeds/)`, then run `npx supabase db reset` to apply migrations and seed in one step. Use this to get a repeatable local dataset for development and manual testing. Demo owner login: `marc.thevenot@example.com` / `Sailing2026!`.
 
 ---

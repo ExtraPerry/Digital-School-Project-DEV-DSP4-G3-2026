@@ -34,6 +34,38 @@
 - Régénérer les types typescript : `npx supabase gen types typescript --local --schema public > src/lib/supabase/database.types.ts`
 - Charger les photos des annonces dans le Storage : `npm run seed:media`
 
+### Hosted environment — branch `lucaslive` / Environnement en ligne
+
+**EN**: `lucaslive` runs the application against the **hosted Supabase project** instead of the local Docker stack. No application code differs from `main`: every Supabase reference is already environment-driven, so switching environments is purely a matter of `.env`.
+
+```bash
+# 1. Point the app at the hosted project (.env is gitignored — never commit it)
+NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<publishable key>
+NEXT_PRIVATE_SUPABASE_ADMIN_KEY=<secret key>
+
+# 2. Bring the hosted database up to the current migration state
+npx supabase login                                  # account with access to the project
+npx supabase link --project-ref <project-ref>
+npx supabase db push                                # applies supabase/migrations/
+
+# 3. Upload the listing photography into the hosted boat-images bucket
+npm run seed:media
+
+# 4. Run
+npm run dev
+```
+
+`npx supabase start` is **not** used on this branch — nothing runs in Docker. What follows from that:
+
+- `supabase/seeds/*.sql` never run against the hosted project (`db push` applies migrations only). The hosted dataset is whatever is already there; `npm run seed:media` is the one fixture step that is safe and idempotent to re-run against it, because it only touches `boat_media` and the `boat-images` bucket.
+- `next.config.ts` picks the Storage origin up from `NEXT_PUBLIC_SUPABASE_URL`, and its local-IP exception for `next/image` switches itself off as soon as the URL is a hosted one.
+- Edge functions must be deployed separately (`npx supabase functions deploy <name>`); `SITE_URL` and the Stripe secrets have to be set as project secrets, not only in `.env`.
+
+**FR**: `lucaslive` fait tourner l'application sur le **projet Supabase en ligne** plutôt que sur la stack Docker locale. Aucun code applicatif ne diffère de `main` : toutes les références à Supabase sont déjà pilotées par l'environnement, le changement se joue donc uniquement dans le `.env`.
+
+Suivez les quatre étapes ci-dessus. `npx supabase start` n'est pas utilisé sur cette branche : les seeds SQL ne s'appliquent pas au projet en ligne (`db push` ne joue que les migrations), et `npm run seed:media` reste la seule étape de fixture réexécutable sans risque.
+
 ### Local seed data & demo accounts / Données de test et comptes de démo
 
 **EN**: Running `npx supabase db reset` applies every migration and then loads the modular fixtures in `supabase/seeds/` (`01_reference_ports` → `08_demo_admin`, run alphabetically). The seeds are idempotent and use relative dates, so the dataset stays valid over time.
