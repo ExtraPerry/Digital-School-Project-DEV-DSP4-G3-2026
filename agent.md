@@ -69,7 +69,8 @@ src/
 │       │   ├── register/
 │       │   ├── become-owner/   # Self-serve RENTER → OWNER upgrade
 │       │   ├── legal/          # Legal notice / Mentions légales
-│       │   ├── terms/          # Terms of use and sale / CGU-CGV
+│       │   ├── terms-of-use/   # Terms of use / CGU
+│       │   ├── terms-of-sales/ # Conditions of sale / CGV
 │       │   ├── privacy/        # Privacy policy (GDPR) / RGPD
 │       │   └── cookies/        # Cookie policy / Politique de cookies
 │       ├── (authenticated)/
@@ -228,7 +229,7 @@ Route groups do **not** appear in URLs. Every page must be registered explicitly
 | `ADMIN_ROUTES`         | Logged-in user with `ADMINISTRATOR` role in `public.user_roles` |
 
 
-**Current public routes:** `/`, `/login`, `/register`, `/search`, `/boats`, `/become-owner`, `/legal`, `/terms`, `/privacy`, `/cookies`.
+**Current public routes:** `/`, `/login`, `/register`, `/search`, `/boats`, `/become-owner`, `/legal`, `/terms-of-use`, `/terms-of-sales`, `/privacy`, `/cookies`.
 
 **Current authenticated routes:** `/owner`, `/bookings`, `/profile`.
 

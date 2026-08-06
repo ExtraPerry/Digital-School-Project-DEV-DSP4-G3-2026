@@ -11,7 +11,8 @@ const PUBLIC_ROUTES = [
   "/boats",
   "/become-owner",
   "/legal",
-  "/terms",
+  "/terms-of-use",
+  "/terms-of-sales",
   "/privacy",
   "/cookies",
 ] as const;
