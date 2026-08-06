@@ -19,7 +19,6 @@ import type {
   BoatFilterBounds,
   BoatSearchFilters,
 } from "@/queries/fetchBoats";
-import { Constants } from "@/lib/supabase/database.types";
 
 export function SearchPageClient({
   filters,
@@ -54,8 +53,6 @@ export function SearchPageClient({
 
   function updateSearchParams(updates: Partial<BoatSearchFilters>) {
     const currentParams = new URLSearchParams(searchParamsString);
-
-    const boatTypeEnums = Constants.public.Enums.boat_type as readonly string[];
 
     if (updates.types !== undefined) {
       currentParams.delete("types");

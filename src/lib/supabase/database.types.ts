@@ -167,8 +167,10 @@ export type Database = {
           alt_text: string | null
           boat_id: string
           created_at: string
+          focal_point: string | null
           id: string
           is_cover: boolean
+          kind: Database["public"]["Enums"]["boat_media_kind"]
           sort_order: number
           storage_bucket: string
           storage_path: string
@@ -178,8 +180,10 @@ export type Database = {
           alt_text?: string | null
           boat_id: string
           created_at?: string
+          focal_point?: string | null
           id?: string
           is_cover?: boolean
+          kind?: Database["public"]["Enums"]["boat_media_kind"]
           sort_order?: number
           storage_bucket?: string
           storage_path: string
@@ -189,8 +193,10 @@ export type Database = {
           alt_text?: string | null
           boat_id?: string
           created_at?: string
+          focal_point?: string | null
           id?: string
           is_cover?: boolean
+          kind?: Database["public"]["Enums"]["boat_media_kind"]
           sort_order?: number
           storage_bucket?: string
           storage_path?: string
@@ -756,6 +762,10 @@ export type Database = {
         Returns: {
           badge: string
           capacity: number
+          cover_alt_text: string
+          cover_focal_point: string
+          cover_storage_bucket: string
+          cover_storage_path: string
           id: string
           length_m: number
           motorization: string
@@ -790,6 +800,7 @@ export type Database = {
         | "OTHER"
         | "SAILOR_CV"
       boat_equipment: "GPS" | "SLEEPING_BERTHS" | "EQUIPPED_KITCHEN"
+      boat_media_kind: "COVER" | "COCKPIT" | "INTERIOR" | "ONBOARD" | "EXTERIOR"
       boat_skipper_option: "INCLUDED" | "OPTIONAL" | "NONE"
       boat_type: "SAILBOAT" | "MOTORBOAT" | "CATAMARAN" | "YACHT"
       reservation_status: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED"
@@ -938,6 +949,7 @@ export const Constants = {
         "SAILOR_CV",
       ],
       boat_equipment: ["GPS", "SLEEPING_BERTHS", "EQUIPPED_KITCHEN"],
+      boat_media_kind: ["COVER", "COCKPIT", "INTERIOR", "ONBOARD", "EXTERIOR"],
       boat_skipper_option: ["INCLUDED", "OPTIONAL", "NONE"],
       boat_type: ["SAILBOAT", "MOTORBOAT", "CATAMARAN", "YACHT"],
       reservation_status: ["PENDING", "CONFIRMED", "CANCELLED", "COMPLETED"],

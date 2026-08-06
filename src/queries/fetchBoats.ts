@@ -1,6 +1,7 @@
 "use client";
 
 import createSupabaseBrowserClient from "@/lib/supabase/createSupabaseBrowserClient";
+import { BoatImage, toCoverImage } from "@/lib/boats";
 import { Constants, Database } from "@/lib/supabase/database.types";
 
 export type BoatEquipment =
@@ -26,8 +27,17 @@ export type BoatSearchFilters = {
 export type BoatSearchResult =
   Database["public"]["Functions"]["search_available_boats"]["Returns"][number];
 
+/**
+ * A search row with its cover resolved to a public Storage URL. The RPC returns
+ * the cover's bucket and path; turning those into a URL needs a Supabase
+ * client, so it happens here rather than in the component tree.
+ */
+export type BoatSearchRow = BoatSearchResult & {
+  coverImage: BoatImage | null;
+};
+
 export type PaginatedBoats = {
-  boats: BoatSearchResult[];
+  boats: BoatSearchRow[];
   totalCount: number;
   page: number;
   pageSize: number;
@@ -70,7 +80,12 @@ export async function fetchBoats(
   const rows = data ?? [];
   const totalCount = rows.length > 0 ? Number(rows[0].total_count) : 0;
 
-  return { boats: rows, totalCount, page, pageSize };
+  const boats = rows.map((row) => ({
+    ...row,
+    coverImage: toCoverImage(supabase, row),
+  }));
+
+  return { boats, totalCount, page, pageSize };
 }
 
 export async function fetchBoatFilterBounds(

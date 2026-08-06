@@ -17,9 +17,10 @@
 - Login into supabase : `npx supabase login`
 - Link to supabase database : `npx supabase link --project-ref "PROJECT_ID_HERE"`
 - Make sure remote DB is not ahead of local DB : `npx supabase db pull`
-- Make sure to pull latest typescript types from supabase remote : `npx supabase gen types typescript --schema public > supabase/database.types.ts`
 - Start the local supabase database : `npx supabase start`
 - Get local supabase information to update .env file : `npx supabase status`
+- Regenerate the typescript types : `npx supabase gen types typescript --local --schema public > src/lib/supabase/database.types.ts`
+- Load the listing photography into Storage : `npm run seed:media`
 
 **FR**: Pour utiliser ce projet en local, vous devez vous assurer de faire les étapes suivantes :
 
@@ -28,20 +29,29 @@
 - Se connecter à supabase : `npx supabase login`
 - Lier à la base de données supabase : `npx supabase link --project-ref "PROJECT_ID_HERE"`
 - Assurez-vous que la DB distante n'est pas en avance sur la DB locale : `npx supabase db pull`
-- Assurez-vous de récupérer les derniers types typescript depuis supabase distant : `npx supabase gen types typescript --schema public > supabase/database.types.ts`
 - Démarrer la base de données supabase locale : `npx supabase start`
 - Obtenir les informations supabase locales pour mettre à jour le fichier .env : `npx supabase status`
+- Régénérer les types typescript : `npx supabase gen types typescript --local --schema public > src/lib/supabase/database.types.ts`
+- Charger les photos des annonces dans le Storage : `npm run seed:media`
 
 ### Local seed data & demo accounts / Données de test et comptes de démo
 
-**EN**: Running `npx supabase db reset` applies every migration and then loads the modular fixtures in `supabase/seeds/` (`01_reference_ports` → `04_demo_availability`, run alphabetically). The seeds are idempotent and use relative dates, so the dataset stays valid over time. All demo accounts share the local-only password **`Sailing2026!`**:
+**EN**: Running `npx supabase db reset` applies every migration and then loads the modular fixtures in `supabase/seeds/` (`01_reference_ports` → `08_demo_admin`, run alphabetically). The seeds are idempotent and use relative dates, so the dataset stays valid over time.
+
+Listing photography is the one fixture SQL cannot carry, because the image bytes have to reach the `boat-images` Storage bucket. Run `npm run seed:media` after the reset to upload the photos and write the matching `boat_media` rows — it is idempotent, and until it runs listings simply show a neutral placeholder.
+
+All demo accounts share the local-only password **`Sailing2026!`**:
 
 - `jean.voisin@sailingloc.com` — Administrator
 - `marc.thevenot@example.com`, `sophie.laurent@example.com` — Owners
 - `lea.bernard@example.com`, `lucas.martin@example.com` — Renters
 - `thomas.petit@example.com` — Visitor
 
-**FR**: La commande `npx supabase db reset` applique toutes les migrations puis charge les fixtures modulaires de `supabase/seeds/` (`01_reference_ports` → `04_demo_availability`, exécutées par ordre alphabétique). Les seeds sont idempotents et utilisent des dates relatives, afin de rester valides dans le temps. Tous les comptes de démonstration partagent le mot de passe **`Sailing2026!`** (usage local uniquement) :
+**FR**: La commande `npx supabase db reset` applique toutes les migrations puis charge les fixtures modulaires de `supabase/seeds/` (`01_reference_ports` → `08_demo_admin`, exécutées par ordre alphabétique). Les seeds sont idempotents et utilisent des dates relatives, afin de rester valides dans le temps.
+
+Les photos des annonces sont la seule fixture que le SQL ne peut pas charger, car les fichiers doivent être déposés dans le bucket Storage `boat-images`. Lancez `npm run seed:media` après le reset pour les téléverser et créer les lignes `boat_media` correspondantes — la commande est idempotente, et tant qu'elle n'a pas été lancée les annonces affichent simplement un bloc neutre.
+
+Tous les comptes de démonstration partagent le mot de passe **`Sailing2026!`** (usage local uniquement) :
 
 - `jean.voisin@sailingloc.com` — Administrateur
 - `marc.thevenot@example.com`, `sophie.laurent@example.com` — Propriétaires
