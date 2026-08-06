@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Playfair_Display } from "next/font/google";
 import { Star } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
@@ -6,7 +7,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { BookingCalendar } from "@/components/boats/booking-calendar";
 import createSupabaseServerClient from "@/lib/supabase/createSupabaseServerClient";
-import { BOAT_TYPE_GRADIENTS } from "@/lib/boats";
+import { BoatMediaKind, toBoatImageSet } from "@/lib/boats";
 import { cn } from "@/lib/utils";
 
 const playfair = Playfair_Display({
@@ -14,23 +15,26 @@ const playfair = Playfair_Display({
   weight: ["600", "700"],
 });
 
-const THUMBNAIL_GRADIENTS = [
-  "from-[#2c4870] to-[#16243d]",
-  "from-[#cfd9e3] to-[#9fb3c4]",
-  "from-[#e3a98a] to-[#c9794f]",
-];
-
 async function getBoat(id: string) {
   const supabase = await createSupabaseServerClient();
   const { data: boat } = await supabase
     .from("boats")
     .select(
-      "id, name, type, length_m, width_m, draft_m, capacity, motorization, skipper_option, price_per_day, deposit_amount, rating, badge, description, ports(name)",
+      "id, name, type, length_m, width_m, draft_m, capacity, motorization, skipper_option, price_per_day, deposit_amount, rating, badge, description, ports(name), boat_media(storage_bucket, storage_path, kind, focal_point, alt_text)",
     )
     .eq("id", id)
+    // The hero reads the cover and the strip below it reads the rest, so the
+    // gallery has to arrive in the order the owner set.
+    .order("sort_order", { referencedTable: "boat_media", ascending: true })
     .maybeSingle();
 
-  return boat;
+  if (!boat) {
+    return null;
+  }
+
+  // Resolving the Storage URLs here keeps the Supabase client in the data layer
+  // and hands the page something it can render directly.
+  return { ...boat, images: toBoatImageSet(supabase, boat.boat_media) };
 }
 
 async function getBoatReviews(id: string) {
@@ -105,6 +109,20 @@ export default async function BoatPage({
     ? tLanding(`featured_badge_${boat.badge}`)
     : null;
   const location = boat.ports?.name ?? "";
+  const boatImageAlt = t("boat_image_alt", {
+    name: boat.name,
+    type: typeLabel,
+    location,
+  });
+  // Demo listings store no alt_text, so each shot falls back to a localized
+  // label chosen by its kind. Owner-written alt text wins when present.
+  const mediaAlts: Record<BoatMediaKind, string> = {
+    COVER: boatImageAlt,
+    COCKPIT: t("gallery_cockpit_alt", { name: boat.name }),
+    INTERIOR: t("gallery_interior_alt", { name: boat.name }),
+    ONBOARD: t("gallery_onboard_alt", { name: boat.name }),
+    EXTERIOR: t("gallery_exterior_alt", { name: boat.name }),
+  };
 
   const characteristics = [
     { label: t("type_label"), value: typeLabel },
@@ -150,32 +168,46 @@ export default async function BoatPage({
       </div>
 
       <div className="mx-auto max-w-6xl px-6 pb-16">
-        <div className="grid gap-8 lg:grid-cols-3 lg:items-start">
-          <div className="flex flex-col gap-8 lg:col-span-2">
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-3 lg:items-start">
+          <div className="flex min-w-0 flex-col gap-8 lg:col-span-2">
             <div className="flex flex-col gap-3">
-              <div
-                className={cn(
-                  "flex h-72 items-start rounded-2xl bg-gradient-to-br p-4 md:h-96",
-                  BOAT_TYPE_GRADIENTS[boat.type],
-                )}
-              >
+              <div className="relative flex h-72 items-start overflow-hidden rounded-2xl bg-neutral-200 p-4 md:h-96">
+                {boat.images.cover ? (
+                  <Image
+                    alt={boat.images.cover.altText ?? boatImageAlt}
+                    className="object-cover"
+                    fill
+                    priority
+                    sizes="(min-width: 1024px) 736px, calc(100vw - 3rem)"
+                    src={boat.images.cover.url}
+                    style={{ objectPosition: boat.images.cover.focalPoint }}
+                  />
+                ) : null}
                 {badgeLabel ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#1a2b48] shadow-sm">
+                  <span className="relative z-10 inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1 text-xs font-semibold text-[#1a2b48] shadow-sm backdrop-blur-sm">
                     {badgeLabel}
                   </span>
                 ) : null}
               </div>
-              <div className="grid grid-cols-3 gap-3">
-                {THUMBNAIL_GRADIENTS.map((gradient) => (
-                  <div
-                    className={cn(
-                      "h-20 rounded-xl bg-gradient-to-br md:h-24",
-                      gradient,
-                    )}
-                    key={gradient}
-                  />
-                ))}
-              </div>
+              {boat.images.gallery.length > 0 ? (
+                <div className="grid min-w-0 grid-cols-3 gap-3">
+                  {boat.images.gallery.map((image) => (
+                    <div
+                      className="relative h-20 overflow-hidden rounded-xl bg-neutral-200 md:h-24"
+                      key={image.url}
+                    >
+                      <Image
+                        alt={image.altText ?? mediaAlts[image.kind]}
+                        className="object-cover"
+                        fill
+                        sizes="(min-width: 1024px) 235px, 31vw"
+                        src={image.url}
+                        style={{ objectPosition: image.focalPoint }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </div>
 
             <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
@@ -256,7 +288,7 @@ export default async function BoatPage({
             </div>
           </div>
 
-          <aside className="lg:sticky lg:top-24">
+          <aside className="min-w-0 lg:sticky lg:top-24">
             <div className="flex flex-col gap-4 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
               <div className="flex flex-col gap-1">
                 <h1

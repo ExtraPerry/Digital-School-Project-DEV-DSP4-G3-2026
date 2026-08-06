@@ -11,6 +11,7 @@
       "title": "This page could not be found."
     },
     "LandingPage": {
+      "boat_image_alt": "{name}, a {type} available for rent in {location}",
       "nav_search_boat": "Search for a boat",
       "nav_become_owner": "Become an owner",
       "nav_help": "Help",
@@ -91,6 +92,11 @@
       "nav_admin_space": "Admin space"
     },
     "BoatPage": {
+      "boat_image_alt": "{name}, a {type} available for rent in {location}",
+      "gallery_cockpit_alt": "Cockpit and helm of {name}",
+      "gallery_interior_alt": "Interior living space of {name}",
+      "gallery_onboard_alt": "Onboard details of {name}",
+      "gallery_exterior_alt": "Alternate exterior view of {name}",
       "meta_title": "{name} — SailingLoc",
       "meta_description": "Rent {name} ({type}) departing from {location} on SailingLoc.",
       "breadcrumb_home": "Home",
@@ -130,6 +136,7 @@
       "not_found_link": "Back to home"
     },
     "SearchPage": {
+      "boat_image_alt": "{name}, a {type} available for rent in {location}",
       "meta_title": "Search — SailingLoc",
       "meta_description": "Search for an available boat on SailingLoc.",
       "breadcrumb_home": "Home",

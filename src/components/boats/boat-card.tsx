@@ -1,7 +1,7 @@
+import Image from "next/image";
 import { Star, Anchor } from "lucide-react";
 import { Link } from "@/i18n/navigation";
-import { cn } from "@/lib/utils";
-import { BOAT_TYPE_GRADIENTS } from "@/lib/boats";
+import { BoatImage } from "@/lib/boats";
 import { Database } from "@/lib/supabase/database.types";
 
 type BoatType = Database["public"]["Enums"]["boat_type"];
@@ -22,22 +22,27 @@ export type BoatCardData = {
 
 export function BoatCard({
   boat,
+  coverImage,
   locale,
   typeLabel,
   badgeLabel,
   unitLabel,
   skipperLabel,
+  imageAlt,
   href,
 }: {
   boat: BoatCardData;
+  /** Cover from `boat_media`; null until the owner uploads photography. */
+  coverImage: BoatImage | null;
   locale: string;
   typeLabel: string;
   badgeLabel?: string;
   unitLabel: string;
   skipperLabel?: string;
+  /** Localized fallback used when the media row carries no owner alt text. */
+  imageAlt: string;
   href: string;
 }) {
-  const gradient = BOAT_TYPE_GRADIENTS[boat.type];
   const priceFormatter = new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "EUR",
@@ -46,18 +51,23 @@ export function BoatCard({
 
   return (
     <Link
-      className="block overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm transition-shadow hover:shadow-md"
+      className="group block overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D68A6E] focus-visible:ring-offset-2"
       href={href}
     >
       <article>
-        <div
-          className={cn(
-            "flex h-40 items-start bg-gradient-to-br p-3",
-            gradient,
-          )}
-        >
+        <div className="relative flex h-40 items-start overflow-hidden bg-neutral-200 p-3">
+          {coverImage ? (
+            <Image
+              alt={coverImage.altText ?? imageAlt}
+              className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.035]"
+              fill
+              sizes="(min-width: 1280px) 270px, (min-width: 1024px) 30vw, (min-width: 640px) 50vw, 100vw"
+              src={coverImage.url}
+              style={{ objectPosition: coverImage.focalPoint }}
+            />
+          ) : null}
           {badgeLabel ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#1a2b48] shadow-sm">
+            <span className="relative z-10 inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1 text-xs font-semibold text-[#1a2b48] shadow-sm backdrop-blur-sm">
               {badgeLabel}
             </span>
           ) : null}

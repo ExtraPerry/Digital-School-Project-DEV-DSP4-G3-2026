@@ -62,11 +62,6 @@ export function SearchResults({
   const currentPage = data?.page ?? 1;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
-  const typeLabel =
-    filters.types && filters.types.length === 1
-      ? tLanding(`search_type_${filters.types[0].toLowerCase()}`)
-      : tLanding("search_type_sailboat");
-
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-4">
       {/* Header: result count + sort */}
@@ -147,7 +142,13 @@ export function SearchResults({
                   motorization: boat.motorization,
                   skipper_option: boat.skipper_option,
                 }}
+                coverImage={boat.coverImage}
                 href={boatHref}
+                imageAlt={t("boat_image_alt", {
+                  name: boat.name,
+                  type: tLanding(`search_type_${boat.type.toLowerCase()}`),
+                  location: boat.port_name,
+                })}
                 key={boat.id}
                 locale={locale}
                 skipperLabel={

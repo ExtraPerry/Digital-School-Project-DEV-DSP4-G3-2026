@@ -172,18 +172,16 @@ insert into public.boat_reviews (id, boat_id, reviewer_id, author_name, rating, 
 on conflict (id) do nothing;
 
 -- ------------------------------------------------------------
--- Media (one cover image per boat; path convention {boat_id}/cover.jpg)
--- Placeholder rows only — no actual files are uploaded by the seed.
+-- Media
 -- ------------------------------------------------------------
-insert into public.boat_media (id, boat_id, storage_bucket, storage_path, sort_order, is_cover, alt_text) values
-  ('40000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000001', 'boat-images', '30000000-0000-0000-0000-000000000001/cover.jpg', 0, true, 'Mistral amarré au port'),
-  ('40000000-0000-0000-0000-000000000002', '30000000-0000-0000-0000-000000000002', 'boat-images', '30000000-0000-0000-0000-000000000002/cover.jpg', 0, true, 'Belle Provence en navigation'),
-  ('40000000-0000-0000-0000-000000000003', '30000000-0000-0000-0000-000000000003', 'boat-images', '30000000-0000-0000-0000-000000000003/cover.jpg', 0, true, 'L''Albatros voiles hissées'),
-  ('40000000-0000-0000-0000-000000000004', '30000000-0000-0000-0000-000000000004', 'boat-images', '30000000-0000-0000-0000-000000000004/cover.jpg', 0, true, 'Aquila au mouillage'),
-  ('40000000-0000-0000-0000-000000000005', '30000000-0000-0000-0000-000000000005', 'boat-images', '30000000-0000-0000-0000-000000000005/cover.jpg', 0, true, 'Calypso et ses panneaux solaires'),
-  ('40000000-0000-0000-0000-000000000006', '30000000-0000-0000-0000-000000000006', 'boat-images', '30000000-0000-0000-0000-000000000006/cover.jpg', 0, true, 'Poséidon catamaran de luxe'),
-  ('40000000-0000-0000-0000-000000000007', '30000000-0000-0000-0000-000000000007', 'boat-images', '30000000-0000-0000-0000-000000000007/cover.jpg', 0, true, 'Le Corsaire dans les calanques'),
-  ('40000000-0000-0000-0000-000000000008', '30000000-0000-0000-0000-000000000008', 'boat-images', '30000000-0000-0000-0000-000000000008/cover.jpg', 0, true, 'Sérénité au coucher du soleil'),
-  ('40000000-0000-0000-0000-000000000009', '30000000-0000-0000-0000-000000000009', 'boat-images', '30000000-0000-0000-0000-000000000009/cover.jpg', 0, true, 'Vent d''Ouest sous voiles'),
-  ('40000000-0000-0000-0000-00000000000a', '30000000-0000-0000-0000-00000000000a', 'boat-images', '30000000-0000-0000-0000-00000000000a/cover.jpg', 0, true, 'Neptune yacht de luxe')
-on conflict (id) do nothing;
+-- Intentionally NOT seeded here. A `boat_media` row is only meaningful next to
+-- the object it points at, and SQL cannot carry the image bytes into the
+-- `boat-images` bucket. Rows and files are therefore loaded together from
+-- `supabase/seeds/assets/boat-images/` by `npm run seed:media`, which is the
+-- single source of truth for demo listing photography and works against the
+-- local stack and a hosted project alike.
+--
+--   npx supabase db reset && npm run seed:media
+--
+-- Listings render without photos until that command runs; the UI degrades to a
+-- neutral placeholder block rather than breaking.
