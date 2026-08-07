@@ -78,13 +78,12 @@ export function ProfilePageContent() {
   const profileSchema = z.object({
     firstName: z.string().trim().min(1, t("validation_first_name")),
     lastName: z.string().trim().min(1, t("validation_last_name")),
-    phone: z
-      .string()
-      .trim()
-      .refine(
-        (value) => value.length === 0 || /^\+?[0-9\s.-]{8,20}$/.test(value),
-        t("validation_phone"),
-      ),
+    //? Deliberately unconstrained. The platform never verifies a phone number
+    //? and nothing depends on one, so a format rule could only reject a
+    //? legitimate way of writing it — extensions, national prefixes, spacing
+    //? conventions that differ by country — while proving nothing about any
+    //? value it let through.
+    phone: z.string().trim(),
   });
 
   const form = useForm({

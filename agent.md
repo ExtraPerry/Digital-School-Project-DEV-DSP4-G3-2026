@@ -498,7 +498,7 @@ Local secrets for edge functions live in `supabase/functions/.env` (gitignored).
 
 | Table | Description | RLS |
 | ----- | ----------- | --- |
-| `public.users` | Profile linked to `auth.users` | Users can view/update own row (`GRANT` select/update to `authenticated`) |
+| `public.users` | Profile linked to `auth.users`. `avatar_path` holds the object path of the member's profile picture inside the public `avatars` bucket (path only, never a URL — see below) | Users can view/update own row (`GRANT` select/update to `authenticated`) |
 | `public.user_roles` | Role enum: `VISITOR`, `RENTER`, `OWNER`, `ADMINISTRATOR`. **VISITOR/RENTER is derived, not chosen** — see below | Users can view own role (`GRANT` select to `authenticated`) |
 | `public.ports` | Rental ports (name, country) | Public SELECT |
 | `public.boats` | Boats listed for rental (`is_published` default false for new rows) | Public SELECT published + own; owner INSERT/UPDATE/DELETE |
@@ -516,13 +516,31 @@ Column additions: `boats.is_published` / `published_at` (publish gated by requir
 
 **Enums:** `boat_type` (`SAILBOAT`, `MOTORBOAT`, `CATAMARAN`, `YACHT`), `boat_skipper_option` (`INCLUDED`, `OPTIONAL`, `NONE`), `boat_equipment` (`GPS`, `SLEEPING_BERTHS`, `EQUIPPED_KITCHEN`), `reservation_status` (`PENDING`, `CONFIRMED`, `CANCELLED`, `COMPLETED`), `boat_document_type` (`INSURANCE`, `REGISTRATION`, `LICENSE`, `OTHER`, `SAILOR_CV`), `boat_media_kind` (`COVER`, `COCKPIT`, `INTERIOR`, `ONBOARD`, `EXTERIOR`), `user_account_status` (`ACTIVE`, `PENDING`, `SUSPENDED` — `PENDING` is reserved and nothing sets it), `admin_action_type` (`SET_USER_ROLE`, `SET_USER_STATUS`, `MODERATE_REVIEW`, `PUBLISH_BOAT`, `UNPUBLISH_BOAT`).
 
+#### The phone number gates nothing (important)
+
+Migration `20260807150000` removed the phone number from every precondition. The platform does not verify phone numbers and has no plan to, so requiring one bought nothing — an account was held back from renting or listing by an unchecked string it could have satisfied with any digits. It also contradicted the specification, which defines a visitor as somebody **not logged in** and a renter as a logged-in user.
+
+The phone is now ordinary profile information: stored when given, absent when not, **never a condition**. Do not reintroduce a format check either; a rule could only reject legitimate ways of writing a number while proving nothing about the ones it lets through.
+
+What still holds:
+
+| | before | now |
+| --- | --- | --- |
+| `check_role_requirements` | email **and** phone for elevated roles | email only |
+| `admin_set_user_role` precondition | email **and** phone | email only |
+| VISITOR ⇄ RENTER sync | email **and** phone | email only |
+| `canBePromoted` (admin list) | email **and** phone | email only |
+| profile form | regex on the phone | accepts anything |
+
+Since authentication always carries an email, every account is a RENTER from its first login and `/become-owner` is reachable immediately. VISITOR survives only for an account with no email at all.
+
 #### The VISITOR/RENTER distinction is derived (important)
 
 `user_roles_type` has always defined the first two roles by profile completeness — VISITOR has no email **and** phone, RENTER has both — but until migration `20260807093000` nothing maintained it. `check_role_requirements` only refuses an elevated role when the details are missing; no path ever promoted an account once they were supplied. Every signup started VISITOR and stayed VISITOR, so `/become-owner` (which requires RENTER) was unreachable for every self-registered member.
 
 `sync_user_role_with_contact_details()` now runs `after insert or update of email, phone on public.users`:
 
-- VISITOR ⇄ RENTER follows the contact details automatically. **Do not set either by hand** — write the profile and let the trigger decide.
+- VISITOR ⇄ RENTER follows the email address automatically. **Do not set either by hand** — write the profile and let the trigger decide.
 - OWNER and ADMINISTRATOR are never rewritten (they are granted deliberately and carry published listings or moderation powers), but they may not *lose* a contact detail: the trigger raises `ROLE_REQUIRES_CONTACT_DETAILS` instead of leaving a role contradicting its own definition.
 - `handle_auth_user_insert` derives the initial role the same way, so a signup that already carries a phone number lands as RENTER.
 
@@ -641,9 +659,9 @@ curl "$NEXT_PUBLIC_SUPABASE_URL/auth/v1/settings" -H "apikey: $NEXT_PUBLIC_SUPAB
 | `[edge_runtime]`                    | Edge runtime settings (enabled, `deno_version = 2`) |
 
 
-Storage is enabled with two buckets: `boat-images` (public, gallery photos) and `boat-documents` (private, owner documents). Buckets are created in **SQL** (migration `20260709160100`) so they survive `db reset` and apply on `db push`; the `[storage.buckets.*]` blocks in `config.toml` only mirror local file-size / MIME limits. Path conventions: `boat-images/{boat_id}/...`, `boat-documents/{boat_id}/...` (boat-scoped), and `boat-documents/owners/{auth_id}/...` (owner-level LICENSE/SAILOR_CV). Edge function blocks: `[functions.create-booking-checkout]` (`verify_jwt = true`) and `[functions.stripe-webhook]` (`verify_jwt = false`).
+Storage is enabled with three buckets: `boat-images` (public, gallery photos), `boat-documents` (private, owner documents) and `avatars` (public, profile pictures). Buckets are created in **SQL** (migrations `20260709160100` and `20260807120000`) so they survive `db reset` and apply on `db push`; the `[storage.buckets.*]` blocks in `config.toml` only mirror local file-size / MIME limits. Path conventions: `boat-images/{boat_id}/...`, `boat-documents/{boat_id}/...` (boat-scoped), `boat-documents/owners/{auth_id}/...` (owner-level LICENSE/SAILOR_CV), and `avatars/{auth_id}/...`. Edge function blocks: `[functions.create-booking-checkout]` (`verify_jwt = true`) and `[functions.stripe-webhook]` (`verify_jwt = false`).
 
-The `boat-images` path convention is load-bearing: the storage object policies authorise writes by matching `(storage.foldername(name))[1]` against a boat the caller owns, so an object stored anywhere but `{boat_id}/...` is unreachable for its owner.
+Every path convention is load-bearing: the object policies authorise writes by matching the first folder segment, `(storage.foldername(name))[1]` — against a boat the caller owns for `boat-images`, against `auth.uid()` for `avatars`. An object stored anywhere else is unreachable by the very person who owns it.
 
 ### UI components
 
@@ -704,7 +722,8 @@ Do **not** commit `.env` or secret keys. Required variables:
 | `NEXT_PRIVATE_SUPABASE_ADMIN_KEY` | Server admin client, and `npm run seed:media`                |
 | `STRIPE_SECRET_KEY`               | Stripe secret key (test mode); also in `supabase/functions/.env` |
 | `STRIPE_WEBHOOK_SECRET`           | Stripe webhook signing secret for `stripe-webhook`           |
-| `SITE_URL`                        | App origin for Checkout success/cancel redirects (e.g. `http://localhost:3000`) |
+| `NEXT_PUBLIC_SITE_URL`            | Origin this deployment is reachable at. Read by `[src/lib/site-url.ts](src/lib/site-url.ts)` and sent as the `redirect_to` of every account email. Unset ⇒ the browser's own origin is used, so local development needs no value. **Must also be allow-listed in Supabase** (`auth.additional_redirect_urls` locally, Authentication → URL Configuration hosted) or GoTrue silently ignores it |
+| `SITE_URL`                        | App origin for Checkout success/cancel redirects (e.g. `http://localhost:3000`). Read by the **edge functions**, not by the app — set it as a Supabase project secret (`npx supabase secrets set`), not only in `.env` |
 | `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` / `_SECRET` | Read by `supabase/config.toml` for the **local** stack only. A hosted project takes its Google credentials from the dashboard |
 
 

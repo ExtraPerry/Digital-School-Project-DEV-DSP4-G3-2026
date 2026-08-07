@@ -83,17 +83,13 @@ export function BecomeOwnerPanel() {
   }
 
   if (!canUpgrade) {
-    //? The only way to be blocked here is an incomplete profile: the role now
-    //? follows the contact details, so a VISITOR is by definition missing an
-    //? email or a phone number. Name what is missing and link straight to the
-    //? screen that fixes it, rather than leaving the member to guess.
-    const missingPhone = !currentUser?.phone?.trim();
-
+    //? Now that the role follows the email alone, and authentication cannot
+    //? happen without one, this is effectively unreachable — it survives for
+    //? the account whose email was somehow cleared. Keep it pointing at the
+    //? profile rather than dead-ending.
     return (
       <div className="flex flex-col gap-4">
-        <p className="text-sm text-neutral-600">
-          {missingPhone ? t("phone_required") : t("renter_required")}
-        </p>
+        <p className="text-sm text-neutral-600">{t("renter_required")}</p>
         <p className="text-xs text-neutral-500">{t("renter_required_hint")}</p>
         <Button
           asChild

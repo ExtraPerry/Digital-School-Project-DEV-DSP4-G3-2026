@@ -51,7 +51,8 @@ export type AdminUser = Pick<
 > & {
   role: UserRoleType | null;
   //? public.check_role_requirements() blocks promotion to any elevated role
-  //? unless the profile carries both an email and a phone number.
+  //? unless the profile carries an email address. The phone number is not
+  //? checked — it is unverified data and gates nothing.
   canBePromoted: boolean;
 };
 
@@ -113,7 +114,7 @@ export async function fetchAdminUsers(
     created_at: user.created_at,
     account_status: user.account_status,
     role: user.user_roles?.role ?? null,
-    canBePromoted: Boolean(user.email?.trim() && user.phone?.trim()),
+    canBePromoted: Boolean(user.email?.trim()),
   }));
 
   return buildPaginatedResult(rows, count, filters.page, ADMIN_PAGE_SIZE);
