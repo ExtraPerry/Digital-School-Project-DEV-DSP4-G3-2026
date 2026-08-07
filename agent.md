@@ -58,6 +58,8 @@ src/
 │   ├── layout.tsx              # Root pass-through layout
 │   ├── page.tsx                # Redirects to default locale
 │   ├── globals.css             # Tailwind + shadcn CSS variables
+│   ├── sitemap.ts              # Dynamic XML sitemap (static + published boats)
+│   ├── robots.ts               # robots.txt with sitemap reference
 │   └── [locale]/
 │       ├── layout.tsx          # Providers: Query, i18n, theme, toaster
 │       ├── not-found.tsx
