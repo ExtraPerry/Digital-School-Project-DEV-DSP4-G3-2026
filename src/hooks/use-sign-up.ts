@@ -15,6 +15,16 @@ type SignUpInput = {
   birthDate: string;
 };
 
+/**
+ * What `signUp` actually achieved.
+ *
+ * With email confirmation switched on — which it is — Supabase creates the
+ * account but returns **no session**, so the visitor is still anonymous. The
+ * form has to say so instead of redirecting them to a home page that quietly
+ * shows them logged out.
+ */
+export type SignUpOutcome = "signed-in" | "confirmation-required" | "failed";
+
 export function useSignUp() {
   const router = useRouter();
   const locale = useLocale();
@@ -26,7 +36,7 @@ export function useSignUp() {
     email,
     password,
     birthDate,
-  }: SignUpInput) {
+  }: SignUpInput): Promise<SignUpOutcome> {
     setIsSubmitting(true);
     setAuthErrorKey(null);
 
@@ -49,10 +59,14 @@ export function useSignUp() {
     if (error) {
       setIsSubmitting(false);
       setAuthErrorKey(mapAuthErrorMessage(error.message));
-      return false;
+      return "failed";
     }
 
-    if (data.user) {
+    //? Without a session there is no authenticated user, so the row-level
+    //? policy on `users` would reject this update. The signup trigger has
+    //? already provisioned the profile from the metadata passed above, so
+    //? there is nothing to repair in that case either.
+    if (data.session && data.user) {
       const { error: profileError } = await supabase
         .from("users")
         .update({
@@ -64,14 +78,21 @@ export function useSignUp() {
       if (profileError) {
         setIsSubmitting(false);
         setAuthErrorKey("error_generic");
-        return false;
+        return "failed";
       }
     }
 
     setIsSubmitting(false);
+
+    if (!data.session) {
+      // Account created, mailbox not yet visited. Redirecting now would drop
+      // the visitor on the home page as an anonymous user with no explanation.
+      return "confirmation-required";
+    }
+
     router.push("/");
     router.refresh();
-    return true;
+    return "signed-in";
   }
 
   async function continueWithGoogle() {

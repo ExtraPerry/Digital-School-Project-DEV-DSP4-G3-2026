@@ -6,7 +6,7 @@ import { z } from "zod";
 import { Link } from "@/i18n/navigation";
 import { AuthErrorAlert } from "@/components/auth/auth-error-alert";
 import { AuthModeTabs } from "@/components/auth/auth-mode-tabs";
-import { GoogleIcon } from "@/components/auth/google-icon";
+import { GoogleAuthButton } from "@/components/auth/google-auth-button";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -186,16 +186,10 @@ export function SignInForm() {
         <Separator className="flex-1" />
       </div>
 
-      <Button
-        className="h-10 w-full gap-2 rounded-lg border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50"
-        disabled={isSubmitting}
-        onClick={() => void continueWithGoogle()}
-        type="button"
-        variant="outline"
-      >
-        <GoogleIcon />
-        {t("google_continue")}
-      </Button>
+      <GoogleAuthButton
+        isSubmitting={isSubmitting}
+        onContinue={() => void continueWithGoogle()}
+      />
 
       <p className="text-center text-sm text-neutral-600">
         {t("no_account")}{" "}
