@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import createSupabaseServerClient from "@/lib/supabase/createSupabaseServerClient";
 import { routing } from "@/i18n/routing";
 
-const BASE_URL = process.env.SITE_URL || "https://sailingloc.com";
+const BASE_URL = "https://www.dsp-dev-o24a-g3.fr";
 
 const STATIC_ROUTES = ["", "/search", "/legal", "/terms", "/privacy", "/cookies"];
 
