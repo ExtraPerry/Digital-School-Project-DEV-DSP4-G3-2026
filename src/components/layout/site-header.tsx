@@ -40,7 +40,7 @@ export async function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 bg-[#1a2b48]">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <SailingLocLogo className="[&_span:last-child]:text-white" variant="light" />
+        <SailingLocLogo variant="light" />
         <nav
           aria-label="Main navigation"
           className="hidden items-center gap-6 text-sm font-medium md:flex"
@@ -60,12 +60,6 @@ export async function SiteHeader() {
               {t("nav_become_owner")}
             </Link>
           ) : null}
-          <Link
-            className="text-white/90 transition-colors hover:text-white"
-            href="#"
-          >
-            {t("nav_help")}
-          </Link>
           <span aria-hidden className="text-white/30">
             |
           </span>
