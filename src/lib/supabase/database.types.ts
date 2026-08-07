@@ -735,7 +735,7 @@ export type Database = {
         }
       }
       get_boat_filter_bounds: {
-        Args: { p_port_name: string }
+        Args: { p_port_name?: string }
         Returns: {
           max_length: number
           max_price: number
@@ -747,17 +747,17 @@ export type Database = {
         Args: {
           p_boat_types?: Database["public"]["Enums"]["boat_type"][]
           p_equipment?: Database["public"]["Enums"]["boat_equipment"][]
-          p_from_date: string
+          p_from_date?: string
           p_max_length?: number
           p_max_price?: number
           p_min_length?: number
           p_min_price?: number
           p_page?: number
           p_page_size?: number
-          p_port_name: string
+          p_port_name?: string
           p_skipper_included?: boolean
           p_sort_by?: string
-          p_to_date: string
+          p_to_date?: string
         }
         Returns: {
           badge: string

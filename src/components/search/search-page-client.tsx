@@ -37,85 +37,106 @@ export function SearchPageClient({
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
   const typeLabel =
-    filters.types && filters.types.length === 1
-      ? tLanding(
-          `search_type_${filters.types[0].toLowerCase()}` as Parameters<typeof tLanding>[0],
-        )
-      : filters.types && filters.types.length > 1
-        ? filters.types
-            .map((t) =>
-              tLanding(
-                `search_type_${t.toLowerCase()}` as Parameters<typeof tLanding>[0],
-              ),
-            )
-            .join(", ")
-        : tLanding("search_type_sailboat");
+    filters.types && filters.types.length > 0
+      ? filters.types
+          .map((type) =>
+            tLanding(
+              `search_type_${type.toLowerCase()}` as Parameters<
+                typeof tLanding
+              >[0],
+            ),
+          )
+          .join(", ")
+      : null;
 
+  /**
+   * Single writer for the query string, shared by the criteria dialog, the
+   * sidebar and the sort select. A criterion set back to its neutral value is
+   * deleted rather than serialised, so clearing everything lands on a bare
+   * `/search` — the same URL the landing page's "See all" link opens.
+   */
   function updateSearchParams(updates: Partial<BoatSearchFilters>) {
     const currentParams = new URLSearchParams(searchParamsString);
 
-    if (updates.types !== undefined) {
-      currentParams.delete("types");
-      updates.types.forEach((t) => currentParams.append("types", t));
-    }
-    if (updates.skipperIncluded !== undefined) {
-      if (updates.skipperIncluded) {
-        currentParams.set("skipper", "true");
+    function setOrDelete(key: string, value: string | null | undefined) {
+      if (value === null || value === undefined || value === "") {
+        currentParams.delete(key);
       } else {
-        currentParams.delete("skipper");
-      }
-    }
-    if (updates.minPrice !== undefined) {
-      currentParams.set("minPrice", String(updates.minPrice));
-    } else if ("minPrice" in updates) {
-      currentParams.delete("minPrice");
-    }
-    if (updates.maxPrice !== undefined) {
-      currentParams.set("maxPrice", String(updates.maxPrice));
-    } else if ("maxPrice" in updates) {
-      currentParams.delete("maxPrice");
-    }
-    if (updates.minLength !== undefined) {
-      currentParams.set("minLength", String(updates.minLength));
-    } else if ("minLength" in updates) {
-      currentParams.delete("minLength");
-    }
-    if (updates.maxLength !== undefined) {
-      currentParams.set("maxLength", String(updates.maxLength));
-    } else if ("maxLength" in updates) {
-      currentParams.delete("maxLength");
-    }
-    if (updates.equipment !== undefined) {
-      currentParams.delete("equipment");
-      updates.equipment.forEach((e) => currentParams.append("equipment", e));
-    }
-    if (updates.sortBy !== undefined) {
-      if (updates.sortBy === "relevance") {
-        currentParams.delete("sortBy");
-      } else {
-        currentParams.set("sortBy", updates.sortBy);
-      }
-    }
-    if (updates.page !== undefined) {
-      if (updates.page === 1) {
-        currentParams.delete("page");
-      } else {
-        currentParams.set("page", String(updates.page));
+        currentParams.set(key, value);
       }
     }
 
-    router.push(`/search?${currentParams.toString()}`);
+    function setOrDeleteAll(key: string, values: readonly string[] | undefined) {
+      currentParams.delete(key);
+      values?.forEach((value) => currentParams.append(key, value));
+    }
+
+    //? Presence of the key — not its value — decides whether a param is
+    //? rewritten, because `undefined` is how the sidebar says "cleared".
+    //? Testing `!== undefined` would make unchecking the last boat type or the
+    //? last equipment silently keep the old param.
+    if ("port" in updates) {
+      setOrDelete("port", updates.port);
+    }
+    if ("from" in updates) {
+      setOrDelete("from", updates.from);
+    }
+    if ("to" in updates) {
+      setOrDelete("to", updates.to);
+    }
+    if ("types" in updates) {
+      setOrDeleteAll("types", updates.types);
+      // The hero search bar still writes the singular `type`; dropping it keeps
+      // a single source of truth once `types` has been written.
+      currentParams.delete("type");
+    }
+    if ("skipperIncluded" in updates) {
+      setOrDelete("skipper", updates.skipperIncluded ? "true" : null);
+    }
+    if ("minPrice" in updates) {
+      setOrDelete("minPrice", updates.minPrice?.toString());
+    }
+    if ("maxPrice" in updates) {
+      setOrDelete("maxPrice", updates.maxPrice?.toString());
+    }
+    if ("minLength" in updates) {
+      setOrDelete("minLength", updates.minLength?.toString());
+    }
+    if ("maxLength" in updates) {
+      setOrDelete("maxLength", updates.maxLength?.toString());
+    }
+    if ("equipment" in updates) {
+      setOrDeleteAll("equipment", updates.equipment);
+    }
+    if ("sortBy" in updates) {
+      setOrDelete(
+        "sortBy",
+        updates.sortBy === "relevance" ? null : updates.sortBy,
+      );
+    }
+    if ("page" in updates) {
+      setOrDelete("page", updates.page === 1 ? null : updates.page?.toString());
+    }
+
+    const queryString = currentParams.toString();
+
+    router.push(queryString ? `/search?${queryString}` : "/search");
     setIsMobileFiltersOpen(false);
   }
 
   return (
     <>
-      <SearchSummaryBar filters={filters} ports={ports} typeLabel={typeLabel} />
+      <SearchSummaryBar
+        filters={filters}
+        onApply={updateSearchParams}
+        ports={ports}
+        typeLabel={typeLabel}
+      />
 
       <div className="min-h-screen bg-[#f7f8fa]">
         <SearchBreadcrumbs port={filters.port} typeLabel={typeLabel} />
 
-        <div className="mx-auto max-w-6xl px-6 pb-16 pt-4">
+        <div className="mx-auto max-w-6xl px-4 pb-16 pt-4 sm:px-6">
           {/* Mobile filters button */}
           <div className="mb-4 lg:hidden">
             <Button
@@ -131,9 +152,16 @@ export function SearchPageClient({
           <div className="flex gap-6">
             {/* Desktop sidebar */}
             <div className="hidden lg:block">
+              {/*
+                Keyed on the query string: the sidebar seeds a TanStack Form
+                from the URL once, so without a remount it would keep showing
+                the previous boat types after the criteria dialog (or the back
+                button) changed them.
+              */}
               <SearchFilters
                 bounds={bounds}
                 filters={filters}
+                key={`filters-${searchParamsString}`}
                 onApply={updateSearchParams}
               />
             </div>
@@ -159,11 +187,11 @@ export function SearchPageClient({
           <SearchFilters
             bounds={bounds}
             filters={filters}
+            key={`mobile-filters-${searchParamsString}`}
             onApply={updateSearchParams}
           />
         </SheetContent>
       </Sheet>
-
     </>
   );
 }

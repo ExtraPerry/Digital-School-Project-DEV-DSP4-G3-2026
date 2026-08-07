@@ -7,6 +7,7 @@ import { z } from "zod";
 import { useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
+import { toISODate, toLocalMidnight } from "@/lib/dates";
 import { Constants } from "@/lib/supabase/database.types";
 
 const BOAT_TYPES = Constants.public.Enums.boat_type.map(
@@ -19,29 +20,13 @@ function inDays(days: number) {
   return date;
 }
 
-function toISODate(date: Date) {
-  return date.toISOString().slice(0, 10);
-}
-
-/** Strips the time component so two dates from different sources (UTC vs local) compare correctly. */
-function toLocalMidnight(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
-export type HeroSearchDefaultValues = {
-  port?: string;
-  from?: Date;
-  to?: Date;
-  type?: (typeof BOAT_TYPES)[number];
-};
-
-export function HeroSearchBar({
-  ports,
-  defaultValues,
-}: {
-  ports: string[];
-  defaultValues?: HeroSearchDefaultValues;
-}) {
+/**
+ * Landing hero entry point into `/search`. Unlike the search page's own
+ * criteria dialog it always commits a port, a window and a type — the hero is a
+ * "take me somewhere" shortcut, and `/search` is reachable unfiltered through
+ * the "See all" link next to the featured boats.
+ */
+export function HeroSearchBar({ ports }: { ports: string[] }) {
   const t = useTranslations("Pages.LandingPage");
   const router = useRouter();
 
@@ -59,10 +44,10 @@ export function HeroSearchBar({
 
   const form = useForm({
     defaultValues: {
-      port: defaultValues?.port ?? ports[0] ?? "",
-      from: defaultValues?.from ?? new Date(),
-      to: defaultValues?.to ?? inDays(6),
-      type: defaultValues?.type ?? BOAT_TYPES[0],
+      port: ports[0] ?? "",
+      from: new Date(),
+      to: inDays(6),
+      type: BOAT_TYPES[0],
     },
     onSubmit: ({ value }) => {
       const validated = heroSearchSchema.parse(value);

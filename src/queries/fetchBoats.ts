@@ -8,10 +8,19 @@ export type BoatEquipment =
   (typeof Constants.public.Enums.boat_equipment)[number];
 export type BoatType = (typeof Constants.public.Enums.boat_type)[number];
 
+/**
+ * Every criterion is optional. `/search` reached with no query string is a
+ * legitimate neutral state — the landing page's "See all" link — and must list
+ * the whole published catalogue rather than silently fall back to a default
+ * port and a default week.
+ *
+ * `from` and `to` only mean something as a pair: a single bound cannot describe
+ * an availability window, so the query layer sends them together or not at all.
+ */
 export type BoatSearchFilters = {
-  port: string;
-  from: string;
-  to: string;
+  port: string | null;
+  from: string | null;
+  to: string | null;
   types?: BoatType[];
   minPrice?: number;
   maxPrice?: number;
@@ -58,9 +67,13 @@ export async function fetchBoats(
   const pageSize = filters.pageSize ?? 12;
 
   const { data, error } = await supabase.rpc("search_available_boats", {
-    p_port_name: filters.port,
-    p_from_date: filters.from,
-    p_to_date: filters.to,
+    // Omitted rather than passed as null: the RPC defaults each criterion to
+    // null and skips its predicate, and the generated Args type has no way to
+    // express a nullable argument.
+    ...(filters.port ? { p_port_name: filters.port } : {}),
+    ...(filters.from && filters.to
+      ? { p_from_date: filters.from, p_to_date: filters.to }
+      : {}),
     ...(filters.types ? { p_boat_types: filters.types } : {}),
     ...(filters.minPrice !== undefined ? { p_min_price: filters.minPrice } : {}),
     ...(filters.maxPrice !== undefined ? { p_max_price: filters.maxPrice } : {}),
@@ -88,14 +101,16 @@ export async function fetchBoats(
   return { boats, totalCount, page, pageSize };
 }
 
+/** A null port asks for the bounds of the whole published catalogue. */
 export async function fetchBoatFilterBounds(
-  portName: string,
+  portName: string | null,
 ): Promise<BoatFilterBounds> {
   const supabase = createSupabaseBrowserClient();
 
-  const { data, error } = await supabase.rpc("get_boat_filter_bounds", {
-    p_port_name: portName,
-  });
+  const { data, error } = await supabase.rpc(
+    "get_boat_filter_bounds",
+    portName ? { p_port_name: portName } : {},
+  );
 
   if (error) {
     throw new Error(`Failed to fetch filter bounds: ${error.message}`);

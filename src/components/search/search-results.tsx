@@ -12,15 +12,12 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { useBoats } from "@/hooks/useBoats";
+import { formatISODate } from "@/lib/dates";
 import type { BoatSearchFilters } from "@/queries/fetchBoats";
 
 const PAGE_SIZE = 12;
 
-function buildPageHref(
-  filters: BoatSearchFilters,
-  page: number,
-  currentParams: URLSearchParams,
-) {
+function buildPageHref(page: number, currentParams: URLSearchParams) {
   const params = new URLSearchParams(currentParams);
   params.set("page", String(page));
   return `?${params.toString()}`;
@@ -62,6 +59,18 @@ export function SearchResults({
   const currentPage = data?.page ?? 1;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
+  //? One complete sentence per combination rather than glued fragments: a
+  //? translator cannot reorder "in {port}" against "from {from} to {to}" if the
+  //? two arrive as separate strings.
+  const hasWindow = Boolean(filters.from && filters.to);
+  const resultCountKey = filters.port
+    ? hasWindow
+      ? "result_count_in_port_for_dates"
+      : "result_count_in_port"
+    : hasWindow
+      ? "result_count_for_dates"
+      : "result_count";
+
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-4">
       {/* Header: result count + sort */}
@@ -72,11 +81,11 @@ export function SearchResults({
           ) : totalCount === 0 ? (
             t("result_count_empty")
           ) : (
-            t("result_count", {
+            t(resultCountKey, {
               count: totalCount,
-              port: filters.port,
-              from: filters.from,
-              to: filters.to,
+              port: filters.port ?? "",
+              from: filters.from ? formatISODate(filters.from) : "",
+              to: filters.to ? formatISODate(filters.to) : "",
             })
           )}
         </p>
@@ -101,9 +110,12 @@ export function SearchResults({
 
       {/* Grid */}
       {isError ? (
-        <div className="flex min-h-48 flex-col items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white p-8 text-center">
-          <p className="font-semibold text-[#1a2b48]">{t("empty_title")}</p>
-          <p className="text-sm text-neutral-500">{t("empty_text")}</p>
+        //? Not the same thing as "no match": the search itself did not run.
+        //? Showing the empty-result copy here sends the visitor off adjusting
+        //? filters that were never the problem.
+        <div className="flex min-h-48 flex-col items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50/60 p-8 text-center">
+          <p className="font-semibold text-[#1a2b48]">{t("error_title")}</p>
+          <p className="text-sm text-neutral-600">{t("error_text")}</p>
         </div>
       ) : isPending ? (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -175,7 +187,7 @@ export function SearchResults({
             {currentPage > 1 && (
               <PaginationItem>
                 <PaginationPrevious
-                  href={buildPageHref(filters, currentPage - 1, currentParams)}
+                  href={buildPageHref(currentPage - 1, currentParams)}
                 />
               </PaginationItem>
             )}
@@ -199,7 +211,7 @@ export function SearchResults({
               return (
                 <PaginationItem key={pageNumber}>
                   <PaginationLink
-                    href={buildPageHref(filters, pageNumber, currentParams)}
+                    href={buildPageHref(pageNumber, currentParams)}
                     isActive={isCurrentPage}
                   >
                     {pageNumber}
@@ -210,7 +222,7 @@ export function SearchResults({
             {currentPage < totalPages && (
               <PaginationItem>
                 <PaginationNext
-                  href={buildPageHref(filters, currentPage + 1, currentParams)}
+                  href={buildPageHref(currentPage + 1, currentParams)}
                 />
               </PaginationItem>
             )}
