@@ -45,7 +45,7 @@ For product requirements, see [documentation/](documentation/).
 | Forms        | `@tanstack/react-form` + `zod`                               |
 | Server state | `@tanstack/react-query` (15 min backup stale time)           |
 | Backend      | Supabase (Auth, Postgres, Realtime, Storage, Edge Functions) |
-| Theming      | `next-themes`                                                |
+| Theming      | `next-themes`, **forced to `light`** — see below             |
 
 
 Key dependencies are in [package.json](package.json).
@@ -638,6 +638,16 @@ The `boat-images` path convention is load-bearing: the storage object policies a
 - Start from shadcn CLI: `npx shadcn@latest add <component>`
 - Config: `[components.json](components.json)` — style `radix-nova`, components land in `src/components/ui/`
 - Customize shadcn primitives in-place; build feature components in `src/components/` (not `ui/`)
+
+#### The site is light-only — do not re-enable system theming
+
+Every page states its colours outright (`bg-white`, `#1a2b48`, `#f7f8fa`) and no component in `src/components/` carries a single `dark:` utility. There is no dark palette and no theme switch in the UI.
+
+The shadcn primitives, however, read `--popover`, `--input`, `--border` and friends, and `globals.css` still ships shadcn's `.dark` block. So following the operating system never produced a dark site — it produced **half** a dark one: on a dark OS the dialog turned near-black under navy text, and input borders turned white on white cards, while the pages holding them stayed light. It reproduced only on some machines, because `next-themes` stores its choice per origin: a `theme=light` left in localhost's `localStorage` masked it while production fell through to the system preference.
+
+`[src/app/[locale]/layout.tsx](src/app/[locale]/layout.tsx)` therefore passes `forcedTheme="light"` with `enableSystem={false}`. The pre-hydration script then applies `light` unconditionally — it never reads `localStorage` or `prefers-color-scheme` — and sets `color-scheme: light`, which keeps native controls (the `<select>` in the search sort and the hero bar) light too.
+
+Anything reading the theme must honour the forced value: `useTheme().theme` still reports the *stored* preference, so `[src/components/ui/sonner.tsx](src/components/ui/sonner.tsx)` reads `forcedTheme ?? theme`. Keep `.dark` in `globals.css` — it is the baseline a real dark palette would build on. Removing `forcedTheme` is a design decision, not a cleanup: it needs a dark palette for the hardcoded page colours first.
 - **Modal vs sheet:** a `Sheet` is for a panel that belongs to the edge of the screen (the mobile filter drawer). A focused form with its own submit belongs in a `Dialog` — `search-criteria-dialog.tsx` and `leave-review-dialog.tsx` are the reference implementations. Cap the height with `max-h-[calc(100dvh-2rem)]` and scroll the body, not the page, so a small viewport never hides the footer.
 - **A form seeded from props must be mounted inside the dialog content**, not beside it. `useForm` reads `defaultValues` once, and Radix unmounts dialog content on close — putting the form in a child component is what makes each open re-read the current state instead of showing a stale draft. The same reasoning applies to the search sidebar, which is keyed on the query string so a URL change remounts it.
 - **Namespaces follow ownership, not location.** A component used by a single page reads `Pages.<ThatPage>`; one shared across pages gets a namespace under `Common` (e.g. `Common.Review` for the post-rental review dialog, used by `/bookings` and `/boats/[id]`).
