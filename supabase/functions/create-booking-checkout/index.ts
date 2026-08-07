@@ -71,19 +71,38 @@ Deno.serve(async (request) => {
   const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY");
   const siteUrl = Deno.env.get("SITE_URL") ?? "http://localhost:3000";
 
-  if (
-    !supabaseUrl ||
-    !supabaseAnonKey ||
-    !supabaseServiceRoleKey ||
-    !stripeSecretKey ||
-    stripeSecretKey.startsWith("sk_test_xxx")
-  ) {
+  // Name the variable that is actually missing. Blaming STRIPE_SECRET_KEY for
+  // all five conditions sent the last reader to the wrong file, and the local
+  // remedy (`functions serve`) is meaningless once the function is deployed:
+  // a hosted project injects the three SUPABASE_* values itself and reads
+  // everything else from its own secrets, not from supabase/functions/.env.
+  const missingConfiguration = [
+    !supabaseUrl && "SUPABASE_URL",
+    !supabaseAnonKey && "SUPABASE_ANON_KEY",
+    !supabaseServiceRoleKey && "SUPABASE_SERVICE_ROLE_KEY",
+    (!stripeSecretKey || stripeSecretKey.startsWith("sk_test_xxx")) &&
+      "STRIPE_SECRET_KEY",
+  ].filter((name): name is string => typeof name === "string");
+
+  if (missingConfiguration.length > 0) {
     return jsonResponse(
       {
         error:
-          "Server misconfigured: set a real STRIPE_SECRET_KEY (test mode) in supabase/functions/.env and run `npx supabase functions serve --env-file supabase/functions/.env`",
+          `Server misconfigured: ${missingConfiguration.join(", ")} is missing or still a placeholder. ` +
+          "Deployed: `npx supabase secrets set STRIPE_SECRET_KEY=sk_test_... SITE_URL=https://your-site`, " +
+          "then redeploy. Local: put it in supabase/functions/.env and run " +
+          "`npx supabase functions serve --env-file supabase/functions/.env`.",
       },
       500,
+    );
+  }
+
+  // Checkout sends the renter back here after paying. Left at its localhost
+  // default on a deployed function, a successful payment would bounce the
+  // renter to a machine that is not theirs.
+  if (!Deno.env.get("SITE_URL")) {
+    console.warn(
+      "SITE_URL is unset; Stripe will return renters to http://localhost:3000.",
     );
   }
 

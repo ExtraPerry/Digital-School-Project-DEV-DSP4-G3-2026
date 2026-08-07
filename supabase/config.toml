@@ -249,6 +249,19 @@ otp_expiry = 3600
 # subject = "You have been invited"
 # content_path = "./supabase/templates/invite.html"
 
+# Branded confirmation email. This wires it up for the LOCAL stack only —
+# a hosted project keeps its templates in the dashboard
+# (Authentication → Emails → Templates → Confirm signup), so the same file has
+# to be pasted there once.
+#
+# Note that `enable_confirmations` above is false locally: sign-up returns a
+# session immediately and this email never goes out. The hosted project has
+# confirmations ON, which is why the "check your inbox" step only appears
+# there — test that flow against the hosted project, not the local stack.
+[auth.email.template.confirmation]
+subject = "Confirmez votre compte SailingLoc / Confirm your SailingLoc account"
+content_path = "./templates/confirm-signup.html"
+
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
 # enabled = true

@@ -753,6 +753,11 @@ Consequences worth knowing before working on that branch:
 | Listing photography | `npm run seed:media` | `npm run seed:media` (same command, same idempotency) |
 | `next/image` local-IP exception | on | off (switches itself by hostname) |
 | Edge functions | `npx supabase functions serve` | `npx supabase functions deploy` + project secrets |
+| Email confirmation | `enable_confirmations = false` — sign-up returns a session immediately | **on** — sign-up returns **no session**, so the "check your inbox" step only ever appears here |
+| Email templates | `[auth.email.template.*]` in `config.toml` | dashboard only — the same file has to be pasted into Authentication → Emails |
+| Outgoing email | Inbucket catches everything at `:54324` | Supabase's built-in SMTP, rate-limited to a few per hour; a real demo needs custom SMTP |
+
+**The confirmation divergence is a trap.** Locally, `signUp` hands back a session and the visitor is logged in; hosted, it returns `session: null` and the account stays dormant until the link is clicked. A sign-up flow that only redirects on success therefore looks correct on the local stack and drops hosted visitors on the home page, anonymous and unwarned. `[src/hooks/use-sign-up.ts](src/hooks/use-sign-up.ts)` returns a `SignUpOutcome` so the form can tell the two apart — test that path against the hosted project.
 
 See the runbook in [README.md](README.md).
 
