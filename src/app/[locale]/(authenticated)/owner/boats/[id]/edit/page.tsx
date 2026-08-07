@@ -2,10 +2,8 @@
 
 import { use } from "react";
 import { useTranslations } from "next-intl";
-import { useQuery } from "@tanstack/react-query";
 import { OwnerBoatForm } from "@/components/owner/owner-boat-form";
-import { fetchOwnerBoatById } from "@/queries/fetchOwnerBoats";
-import { DEFAULT_TANSTACK_QUERY_STALE_TIME_IN_MS } from "@/constants/TanstackQuery";
+import { useOwnerBoat } from "@/hooks/useOwnerBoats";
 
 export default function OwnerEditBoatPage({
   params,
@@ -14,11 +12,7 @@ export default function OwnerEditBoatPage({
 }) {
   const { id } = use(params);
   const t = useTranslations("Pages.OwnerSpace");
-  const { data: boat, isLoading, error } = useQuery({
-    queryKey: ["owner-boat", id],
-    queryFn: () => fetchOwnerBoatById(id),
-    staleTime: DEFAULT_TANSTACK_QUERY_STALE_TIME_IN_MS,
-  });
+  const { data: boat, isLoading, error } = useOwnerBoat(id);
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-8">

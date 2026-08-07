@@ -34,7 +34,9 @@ export default async function OwnerLayout({
   return (
     <div className="owner-space flex min-h-screen flex-col bg-[#f4f6f9] text-[#1a2b48]">
       <SiteHeader />
-      <div className="flex min-h-0 flex-1">
+      {/* Stacked on a phone (the sidebar becomes a scrolling bar), side by
+          side from `md`. */}
+      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         <OwnerSidebar />
         <main className="min-w-0 flex-1 overflow-auto">{children}</main>
       </div>

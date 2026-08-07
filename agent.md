@@ -374,7 +374,7 @@ Admin tables filter, sort and paginate **server-side through PostgREST**, not in
 | `useCurrentUser` | `src/hooks/useCurrentUser.ts` | `["current-user"]` |
 | `useCurrentUserRole` | `src/hooks/useCurrentUserRole.ts` | `["current-user-role"]` |
 | `useBoats(filters)` | `src/hooks/useBoats.ts` | `["boats", "list", filters]` |
-| `useOwnerBoats` | `src/hooks/useOwnerBoats.ts` | `["owner-boats"]` |
+| `useOwnerBoats` / `useOwnerBoat(boatId)` | `src/hooks/useOwnerBoats.ts` | `["owner-boats"]` / `["owner-boat", boatId]` |
 | `useOwnerDocuments` | `src/hooks/useOwnerDocuments.ts` | `["owner-documents"]` |
 | `useOwnerAvailabilitySlots` / `useBoatAvailabilitySlots` | `src/hooks/useBoatAvailabilitySlots.ts` | `["owner-availability"]` / `["boat-availability", boatId]` |
 | `usePorts` | `src/hooks/usePorts.ts` | `["ports"]` |
@@ -499,7 +499,7 @@ Local secrets for edge functions live in `supabase/functions/.env` (gitignored).
 | Table | Description | RLS |
 | ----- | ----------- | --- |
 | `public.users` | Profile linked to `auth.users` | Users can view/update own row (`GRANT` select/update to `authenticated`) |
-| `public.user_roles` | Role enum: `VISITOR`, `RENTER`, `OWNER`, `ADMINISTRATOR` | Users can view own role (`GRANT` select to `authenticated`) |
+| `public.user_roles` | Role enum: `VISITOR`, `RENTER`, `OWNER`, `ADMINISTRATOR`. **VISITOR/RENTER is derived, not chosen** — see below | Users can view own role (`GRANT` select to `authenticated`) |
 | `public.ports` | Rental ports (name, country) | Public SELECT |
 | `public.boats` | Boats listed for rental (`is_published` default false for new rows) | Public SELECT published + own; owner INSERT/UPDATE/DELETE |
 | `public.boat_reviews` | Reviews left by renters on boats (`reviewer_id`, optional unique `reservation_id`, `moderation_status`/`moderated_at`/`moderated_by`) | **Two** permissive SELECT policies: `to anon, authenticated using (moderation_status <> 'REJECTED')` and an admin-only `to authenticated using (private.is_administrator())`. Authenticated INSERT for own COMPLETED reservation. **No UPDATE policy or grant** — moderation goes through `admin_moderate_review()` |
@@ -515,6 +515,18 @@ Local secrets for edge functions live in `supabase/functions/.env` (gitignored).
 Column additions: `boats.is_published` / `published_at` (publish gated by required documents), `ports.slug` (unique, kebab-case), `boat_reservations.status` / `total_amount` / `currency`, `payment_transactions.commission_amount` / `owner_amount`, `boat_reviews.reservation_id`.
 
 **Enums:** `boat_type` (`SAILBOAT`, `MOTORBOAT`, `CATAMARAN`, `YACHT`), `boat_skipper_option` (`INCLUDED`, `OPTIONAL`, `NONE`), `boat_equipment` (`GPS`, `SLEEPING_BERTHS`, `EQUIPPED_KITCHEN`), `reservation_status` (`PENDING`, `CONFIRMED`, `CANCELLED`, `COMPLETED`), `boat_document_type` (`INSURANCE`, `REGISTRATION`, `LICENSE`, `OTHER`, `SAILOR_CV`), `boat_media_kind` (`COVER`, `COCKPIT`, `INTERIOR`, `ONBOARD`, `EXTERIOR`), `user_account_status` (`ACTIVE`, `PENDING`, `SUSPENDED` — `PENDING` is reserved and nothing sets it), `admin_action_type` (`SET_USER_ROLE`, `SET_USER_STATUS`, `MODERATE_REVIEW`, `PUBLISH_BOAT`, `UNPUBLISH_BOAT`).
+
+#### The VISITOR/RENTER distinction is derived (important)
+
+`user_roles_type` has always defined the first two roles by profile completeness — VISITOR has no email **and** phone, RENTER has both — but until migration `20260807093000` nothing maintained it. `check_role_requirements` only refuses an elevated role when the details are missing; no path ever promoted an account once they were supplied. Every signup started VISITOR and stayed VISITOR, so `/become-owner` (which requires RENTER) was unreachable for every self-registered member.
+
+`sync_user_role_with_contact_details()` now runs `after insert or update of email, phone on public.users`:
+
+- VISITOR ⇄ RENTER follows the contact details automatically. **Do not set either by hand** — write the profile and let the trigger decide.
+- OWNER and ADMINISTRATOR are never rewritten (they are granted deliberately and carry published listings or moderation powers), but they may not *lose* a contact detail: the trigger raises `ROLE_REQUIRES_CONTACT_DETAILS` instead of leaving a role contradicting its own definition.
+- `handle_auth_user_insert` derives the initial role the same way, so a signup that already carries a phone number lands as RENTER.
+
+**Never name a PL/pgSQL variable `current_role`.** It is a reserved SQL keyword — Postgres' own session role — and the parser resolves it before PL/pgSQL substitutes the variable, so assignments go to a variable nothing reads. `upgrade_current_user_to_owner()` did exactly that and could never succeed for anyone: every account, RENTER included, was told `Only RENTER accounts can become OWNER. Current role: postgres.` The same trap applies to `current_user`, `current_schema` and `session_user`.
 
 #### Admin write model (important)
 
@@ -778,7 +790,7 @@ Do **not** assume these exist. Build them when needed, following the conventions
 | `boat_reservations` PII exposure | Its only SELECT policy is `for select to anon, authenticated using (true)`, so any anonymous visitor can read every booking. Pre-existing; it is also why the table is kept out of the Realtime publication. Fixing it breaks the public availability calendar, so it needs its own design pass |
 | Low-contrast coral on small text | `#D68A6E` on white is ≈3:1, below the WCAG AA 4.5:1 floor for small text. Used for action links across the owner space, landing page and admin. Fine on filled buttons (white on coral); a palette fix is a cross-cutting change |
 | No owner image upload UI | The read path is complete: `boat_media` rows and `boat-images` objects drive every listing photo on the landing page, the search grid and the boat page. What is missing is the **write** path — the owner boat form has no upload, reorder or delete control, so photography can only be loaded through `npm run seed:media`. A boat created through `/owner/boats/new` renders with a neutral placeholder |
-| No owner reservations page | Dashboard reservation/revenue/occupancy stats are placeholders until an owner bookings view lands  |
+| No owner reservations page | Dashboard revenue/reservations/occupancy stat cards are hardcoded placeholders (only the rating is real) until an owner bookings view lands. An owner currently has **no way to see who booked their boat** |
 | No password recovery flow | `/profile` can change a password when the current one is known, but the **Forgot password** link on `/login` still points at `href="#"`. Nothing calls `resetPasswordForEmail`, and there is no `/reset-password` page to land the recovery link on |
 | No Stripe Connect     | Commission is recorded in DB only (Checkout test mode); no owner payout onboarding                      |
 

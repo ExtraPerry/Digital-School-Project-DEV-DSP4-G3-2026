@@ -1,6 +1,7 @@
 "use client";
 
 import { useForm } from "@tanstack/react-form";
+import { Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -9,7 +10,9 @@ import { Constants } from "@/lib/supabase/database.types";
 import { usePorts } from "@/hooks/usePorts";
 import { useOwnerDocuments } from "@/hooks/useOwnerDocuments";
 import {
+  BOAT_HAS_RESERVATIONS,
   useCreateOwnerBoat,
+  useDeleteOwnerBoat,
   usePublishOwnerBoat,
   useUnpublishOwnerBoat,
   useUpdateOwnerBoat,
@@ -52,6 +55,7 @@ export function OwnerBoatForm({ boat }: { boat?: OwnerBoat }) {
   const updateBoat = useUpdateOwnerBoat();
   const publishBoat = usePublishOwnerBoat();
   const unpublishBoat = useUnpublishOwnerBoat();
+  const deleteBoat = useDeleteOwnerBoat();
 
   const schema = z.object({
     name: z.string().min(2, t("form_validation_name")),
@@ -83,6 +87,28 @@ export function OwnerBoatForm({ boat }: { boat?: OwnerBoat }) {
       depositAmount: boat ? String(boat.deposit_amount) : "0",
       description: boat?.description ?? "",
     } satisfies BoatFormValues,
+    //? Every field is checked against the whole schema, not just `name`. Before
+    //? this, a missing port or a blank length left `canSubmit` true, `parse()`
+    //? threw outside the try below, and the rejection went nowhere: the button
+    //? did nothing and said nothing.
+    validators: {
+      onSubmit: ({ value }) => {
+        const result = schema.safeParse(value);
+
+        if (result.success) {
+          return undefined;
+        }
+
+        return {
+          fields: Object.fromEntries(
+            result.error.issues.map((issue) => [
+              String(issue.path[0]),
+              issue.message,
+            ]),
+          ),
+        };
+      },
+    },
     onSubmit: async ({ value }) => {
       const validated = schema.parse(value);
       const payload = {
@@ -124,7 +150,31 @@ export function OwnerBoatForm({ boat }: { boat?: OwnerBoat }) {
     createBoat.isPending ||
     updateBoat.isPending ||
     publishBoat.isPending ||
-    unpublishBoat.isPending;
+    unpublishBoat.isPending ||
+    deleteBoat.isPending;
+
+  async function handleDelete() {
+    if (!boat || !window.confirm(t("form_delete_confirm", { name: boat.name }))) {
+      return;
+    }
+
+    try {
+      await deleteBoat.mutateAsync(boat.id);
+      toast.success(t("form_delete_success"));
+      router.push("/owner/boats");
+    } catch (error) {
+      const hasReservations =
+        error instanceof Error && error.message === BOAT_HAS_RESERVATIONS;
+
+      toast.error(
+        hasReservations
+          ? t("form_delete_blocked")
+          : error instanceof Error
+            ? error.message
+            : t("form_delete_error"),
+      );
+    }
+  }
 
   async function handlePublishToggle() {
     if (!boat) {
@@ -182,7 +232,10 @@ export function OwnerBoatForm({ boat }: { boat?: OwnerBoat }) {
 
         <form.Field name="type">
           {(field) => (
-            <Field label={t("form_type_label")}>
+            <Field
+              error={field.state.meta.errors[0]}
+              label={t("form_type_label")}
+            >
               <Select
                 onValueChange={(value) =>
                   field.handleChange(
@@ -208,7 +261,10 @@ export function OwnerBoatForm({ boat }: { boat?: OwnerBoat }) {
 
         <form.Field name="portId">
           {(field) => (
-            <Field label={t("form_port_label")}>
+            <Field
+              error={field.state.meta.errors[0]}
+              label={t("form_port_label")}
+            >
               <Select
                 onValueChange={(value) => field.handleChange(value)}
                 value={field.state.value || undefined}
@@ -230,7 +286,10 @@ export function OwnerBoatForm({ boat }: { boat?: OwnerBoat }) {
 
         <form.Field name="skipperOption">
           {(field) => (
-            <Field label={t("form_skipper_label")}>
+            <Field
+              error={field.state.meta.errors[0]}
+              label={t("form_skipper_label")}
+            >
               <Select
                 onValueChange={(value) =>
                   field.handleChange(
@@ -256,7 +315,10 @@ export function OwnerBoatForm({ boat }: { boat?: OwnerBoat }) {
 
         <form.Field name="lengthM">
           {(field) => (
-            <Field label={t("form_length_label")}>
+            <Field
+              error={field.state.meta.errors[0]}
+              label={t("form_length_label")}
+            >
               <Input
                 inputMode="decimal"
                 onBlur={field.handleBlur}
@@ -269,7 +331,10 @@ export function OwnerBoatForm({ boat }: { boat?: OwnerBoat }) {
 
         <form.Field name="widthM">
           {(field) => (
-            <Field label={t("form_width_label")}>
+            <Field
+              error={field.state.meta.errors[0]}
+              label={t("form_width_label")}
+            >
               <Input
                 inputMode="decimal"
                 onBlur={field.handleBlur}
@@ -282,7 +347,10 @@ export function OwnerBoatForm({ boat }: { boat?: OwnerBoat }) {
 
         <form.Field name="draftM">
           {(field) => (
-            <Field label={t("form_draft_label")}>
+            <Field
+              error={field.state.meta.errors[0]}
+              label={t("form_draft_label")}
+            >
               <Input
                 inputMode="decimal"
                 onBlur={field.handleBlur}
@@ -295,7 +363,10 @@ export function OwnerBoatForm({ boat }: { boat?: OwnerBoat }) {
 
         <form.Field name="capacity">
           {(field) => (
-            <Field label={t("form_capacity_label")}>
+            <Field
+              error={field.state.meta.errors[0]}
+              label={t("form_capacity_label")}
+            >
               <Input
                 inputMode="numeric"
                 onBlur={field.handleBlur}
@@ -308,7 +379,10 @@ export function OwnerBoatForm({ boat }: { boat?: OwnerBoat }) {
 
         <form.Field name="motorization">
           {(field) => (
-            <Field label={t("form_motorization_label")}>
+            <Field
+              error={field.state.meta.errors[0]}
+              label={t("form_motorization_label")}
+            >
               <Input
                 onBlur={field.handleBlur}
                 onChange={(event) => field.handleChange(event.target.value)}
@@ -320,7 +394,10 @@ export function OwnerBoatForm({ boat }: { boat?: OwnerBoat }) {
 
         <form.Field name="pricePerDay">
           {(field) => (
-            <Field label={t("form_price_label")}>
+            <Field
+              error={field.state.meta.errors[0]}
+              label={t("form_price_label")}
+            >
               <Input
                 inputMode="decimal"
                 onBlur={field.handleBlur}
@@ -333,7 +410,10 @@ export function OwnerBoatForm({ boat }: { boat?: OwnerBoat }) {
 
         <form.Field name="depositAmount">
           {(field) => (
-            <Field label={t("form_deposit_label")}>
+            <Field
+              error={field.state.meta.errors[0]}
+              label={t("form_deposit_label")}
+            >
               <Input
                 inputMode="decimal"
                 onBlur={field.handleBlur}
@@ -347,7 +427,10 @@ export function OwnerBoatForm({ boat }: { boat?: OwnerBoat }) {
 
       <form.Field name="description">
         {(field) => (
-          <Field label={t("form_description_label")}>
+          <Field
+              error={field.state.meta.errors[0]}
+              label={t("form_description_label")}
+            >
             <Textarea
               onBlur={field.handleBlur}
               onChange={(event) => field.handleChange(event.target.value)}
@@ -387,6 +470,21 @@ export function OwnerBoatForm({ boat }: { boat?: OwnerBoat }) {
             {boat.is_published
               ? t("form_unpublish_cta")
               : t("form_publish_cta")}
+          </Button>
+        ) : null}
+
+        {boat ? (
+          <Button
+            className="ml-auto rounded-md border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+            disabled={isSubmitting}
+            onClick={() => {
+              void handleDelete();
+            }}
+            type="button"
+            variant="outline"
+          >
+            <Trash2 aria-hidden className="size-4" />
+            {t("form_delete_cta")}
           </Button>
         ) : null}
       </div>

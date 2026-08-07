@@ -3,7 +3,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import createSupabaseBrowserClient from "@/lib/supabase/createSupabaseBrowserClient";
 import { Database } from "@/lib/supabase/database.types";
-import { OWNER_BOATS_QUERY_KEY } from "@/hooks/useOwnerBoats";
+import {
+  OWNER_BOAT_QUERY_KEY_PREFIX,
+  OWNER_BOATS_QUERY_KEY,
+} from "@/hooks/useOwnerBoats";
 import { OWNER_DOCUMENTS_QUERY_KEY } from "@/hooks/useOwnerDocuments";
 import {
   OWNER_AVAILABILITY_QUERY_KEY,
@@ -94,7 +97,7 @@ export function useCreateOwnerBoat() {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: OWNER_BOATS_QUERY_KEY });
-      await queryClient.invalidateQueries({ queryKey: ["owner-boat"] });
+      await queryClient.invalidateQueries({ queryKey: [OWNER_BOAT_QUERY_KEY_PREFIX] });
     },
   });
 }
@@ -127,7 +130,7 @@ export function useUpdateOwnerBoat() {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: OWNER_BOATS_QUERY_KEY });
-      await queryClient.invalidateQueries({ queryKey: ["owner-boat"] });
+      await queryClient.invalidateQueries({ queryKey: [OWNER_BOAT_QUERY_KEY_PREFIX] });
     },
   });
 }
@@ -154,7 +157,7 @@ export function usePublishOwnerBoat() {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: OWNER_BOATS_QUERY_KEY });
-      await queryClient.invalidateQueries({ queryKey: ["owner-boat"] });
+      await queryClient.invalidateQueries({ queryKey: [OWNER_BOAT_QUERY_KEY_PREFIX] });
     },
   });
 }
@@ -181,7 +184,44 @@ export function useUnpublishOwnerBoat() {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: OWNER_BOATS_QUERY_KEY });
-      await queryClient.invalidateQueries({ queryKey: ["owner-boat"] });
+      await queryClient.invalidateQueries({ queryKey: [OWNER_BOAT_QUERY_KEY_PREFIX] });
+    },
+  });
+}
+
+/**
+ * Deletes a listing the owner no longer wants to keep.
+ *
+ * `boats` cascades to its media, equipment links, availability slots and
+ * reviews, but `boat_reservations.boat_id` does not cascade — a boat someone
+ * has actually booked cannot be deleted, and Postgres says so with a foreign
+ * key violation. That is the right outcome (a rental history must not vanish),
+ * so the code recognises it and lets the UI explain rather than showing the
+ * raw constraint name.
+ */
+export const BOAT_HAS_RESERVATIONS = "BOAT_HAS_RESERVATIONS";
+
+export function useDeleteOwnerBoat() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (boatId: string) => {
+      const supabase = createSupabaseBrowserClient();
+
+      const { error } = await supabase.from("boats").delete().eq("id", boatId);
+
+      if (error) {
+        //? 23503 is foreign_key_violation.
+        throw new Error(
+          error.code === "23503" ? BOAT_HAS_RESERVATIONS : error.message,
+        );
+      }
+
+      return boatId;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: OWNER_BOATS_QUERY_KEY });
+      await queryClient.invalidateQueries({ queryKey: [OWNER_BOAT_QUERY_KEY_PREFIX] });
     },
   });
 }

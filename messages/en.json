@@ -355,14 +355,16 @@
       "already_owner": "Your account is already an owner. Open your owner space.",
       "go_to_dashboard": "Open owner space",
       "renter_required": "Only renter accounts (email and phone set) can become owners.",
-      "renter_required_hint": "Complete your profile with a phone number, then try again.",
+      "renter_required_hint": "Add it to your profile and this page will unlock straight away.",
       "description": "Upgrade to an owner account to rent out your boats peer-to-peer.",
       "benefit_1": "Create and publish listings (draft until documents are ready)",
       "benefit_2": "Manage availability on a dedicated calendar",
       "benefit_3": "Upload boat license, insurance and sailor CV",
       "cta": "Activate my owner space",
       "success": "Owner space activated.",
-      "error": "Could not activate owner space."
+      "error": "Could not activate owner space.",
+      "phone_required": "Your profile is missing a phone number, which owners need so renters can reach them.",
+      "complete_profile_cta": "Complete my profile"
     },
     "OwnerSpace": {
       "sidebar_section": "Owner space",
@@ -474,7 +476,12 @@
       "form_save_error": "Could not save the boat.",
       "form_publish_success": "Boat published.",
       "form_unpublish_success": "Boat unpublished.",
-      "form_publish_error": "Publishing failed. Check required documents."
+      "form_publish_error": "Publishing failed. Check required documents.",
+      "form_delete_cta": "Delete listing",
+      "form_delete_confirm": "Delete \"{name}\"? This removes its photos, equipment and availability for good.",
+      "form_delete_success": "Listing deleted.",
+      "form_delete_error": "Could not delete this listing.",
+      "form_delete_blocked": "This listing has reservations attached, so it cannot be deleted. Unpublish it instead to take it off the platform."
     },
     "LegalNoticePage": {
       "title": "Legal notice",

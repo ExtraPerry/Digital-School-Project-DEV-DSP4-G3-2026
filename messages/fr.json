@@ -355,14 +355,16 @@
       "already_owner": "Votre compte est déjà propriétaire. Accédez à votre espace.",
       "go_to_dashboard": "Ouvrir l'espace propriétaire",
       "renter_required": "Seuls les comptes locataires (e-mail et téléphone renseignés) peuvent devenir propriétaires.",
-      "renter_required_hint": "Complétez votre profil avec un numéro de téléphone, puis réessayez.",
+      "renter_required_hint": "Ajoutez-le à votre profil et cette page se débloquera aussitôt.",
       "description": "Passez en compte propriétaire pour mettre vos bateaux en location entre particuliers.",
       "benefit_1": "Créer et publier vos annonces (brouillon jusqu'aux documents validés)",
       "benefit_2": "Gérer les disponibilités sur un calendrier dédié",
       "benefit_3": "Déposer permis bateau, assurances et CV marin",
       "cta": "Activer mon espace propriétaire",
       "success": "Espace propriétaire activé.",
-      "error": "Impossible d'activer l'espace propriétaire."
+      "error": "Impossible d'activer l'espace propriétaire.",
+      "phone_required": "Il manque un numéro de téléphone à votre profil : les propriétaires en ont besoin pour que les locataires puissent les joindre.",
+      "complete_profile_cta": "Compléter mon profil"
     },
     "OwnerSpace": {
       "sidebar_section": "Espace propriétaire",
@@ -474,7 +476,12 @@
       "form_save_error": "Impossible d'enregistrer le bateau.",
       "form_publish_success": "Bateau publié.",
       "form_unpublish_success": "Bateau dépublié.",
-      "form_publish_error": "Publication impossible. Vérifiez les documents requis."
+      "form_publish_error": "Publication impossible. Vérifiez les documents requis.",
+      "form_delete_cta": "Supprimer l'annonce",
+      "form_delete_confirm": "Supprimer « {name} » ? Ses photos, équipements et disponibilités seront perdus.",
+      "form_delete_success": "Annonce supprimée.",
+      "form_delete_error": "Impossible de supprimer cette annonce.",
+      "form_delete_blocked": "Cette annonce est liée à des réservations : elle ne peut pas être supprimée. Dépubliez-la pour la retirer de la plateforme."
     },
     "LegalNoticePage": {
       "title": "Mentions légales",
