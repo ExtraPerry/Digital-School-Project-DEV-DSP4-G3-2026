@@ -85,6 +85,7 @@
       "footer_copyright": "© 2026 SailingLoc — projet étudiant fictif",
       "footer_legal": "Mentions légales",
       "footer_terms": "CGU",
+      "footer_cgv": "CGV",
       "footer_privacy": "RGPD",
       "footer_cookies": "Cookies",
       "footer_disclaimer": "Projet étudiant fictif : aucun achat ou réservation réel ne peut être effectué",
@@ -450,13 +451,13 @@
       ]
     },
     "TermsPage": {
-      "title": "Conditions générales d'utilisation et de vente",
+      "title": "Conditions générales d'utilisation (CGU)",
       "lastUpdated": "Dernière mise à jour : août 2026",
-      "disclaimer": "Ces conditions sont fournies pour un projet académique. SailingLoc est fictif ; aucun contrat, location ou paiement réel n'est formé par l'utilisation de ce site.",
+      "disclaimer": "Ces conditions générales d'utilisation sont fournies pour un projet académique. SailingLoc est fictif ; l'utilisation de ce site ne forme aucun contrat réel. Les conditions de vente et de location font l'objet des Conditions générales de vente (CGV) distinctes.",
       "sections": [
         {
           "heading": "Objet",
-          "body": "Ces conditions régissent l'utilisation de la plateforme de démonstration SailingLoc, qui simule une place de marché de location de bateaux entre particuliers reliant propriétaires et locataires."
+          "body": "Ces conditions générales d'utilisation (CGU) régissent l'accès et l'utilisation de la plateforme de démonstration SailingLoc, qui simule une place de marché de location de bateaux entre particuliers reliant propriétaires et locataires. Les conditions applicables aux réservations et aux paiements figurent dans les Conditions générales de vente (CGV)."
         },
         {
           "heading": "Compte et éligibilité",
@@ -471,20 +472,63 @@
           ]
         },
         {
-          "heading": "Réservations et paiements",
-          "body": "Les réservations utilisent Stripe en mode test. Aucun montant réel n'est débité et aucune réservation réelle n'est créée. Une commission de plateforme de 10 % est enregistrée uniquement à des fins de démonstration."
-        },
-        {
-          "heading": "Annulations",
-          "body": "Aucune transaction réelle n'ayant lieu, les règles d'annulation et de remboursement sont simulées et n'ont aucune conséquence financière."
-        },
-        {
           "heading": "Usage acceptable",
           "body": "Les utilisateurs ne doivent pas détourner la démonstration, publier de contenu illicite ni perturber le service. Les données de test peuvent être supprimées sans préavis."
         },
         {
+          "heading": "Propriété intellectuelle",
+          "body": "Le nom, l'interface et le contenu de SailingLoc sont produits à des fins académiques. Les utilisateurs ne peuvent pas les réutiliser à des fins commerciales."
+        },
+        {
+          "heading": "Disponibilité",
+          "body": "S'agissant d'une démonstration académique, la plateforme est fournie « en l'état », sans aucune garantie de disponibilité, de continuité ou d'absence d'erreurs."
+        },
+        {
           "heading": "Modifications",
-          "body": "Ces conditions peuvent évoluer avec le projet académique. La poursuite de l'utilisation de la démonstration vaut acceptation de la version en vigueur."
+          "body": "Ces conditions d'utilisation peuvent évoluer avec le projet académique. La poursuite de l'utilisation de la démonstration vaut acceptation de la version en vigueur."
+        }
+      ]
+    },
+    "CGVPage": {
+      "title": "Conditions générales de vente (CGV)",
+      "lastUpdated": "Dernière mise à jour : août 2026",
+      "disclaimer": "Ces conditions générales de vente sont illustratives et s'inscrivent dans un projet académique. SailingLoc est fictif ; aucune vente, location, paiement ou remboursement réel ne peut avoir lieu sur cette plateforme.",
+      "sections": [
+        {
+          "heading": "Objet et champ d'application",
+          "body": "Ces conditions générales de vente (CGV) régissent les transactions de réservation simulées réalisées sur la plateforme de démonstration SailingLoc entre un locataire et un propriétaire de bateau, SailingLoc agissant en qualité d'intermédiaire."
+        },
+        {
+          "heading": "Parties",
+          "body": "Le contrat de location est simulé entre le propriétaire (vendeur du service de location) et le locataire (acheteur). SailingLoc fournit uniquement la plateforme de mise en relation et ne loue elle-même aucun bateau."
+        },
+        {
+          "heading": "Prix et commission de plateforme",
+          "body": "Les prix affichés sont indicatifs et exprimés en euros, toutes taxes comprises. Pour chaque location simulée, SailingLoc enregistre une commission de plateforme de 10 % sur le montant total. Le projet étant fictif, aucun montant n'est réellement dû ni encaissé."
+        },
+        {
+          "heading": "Processus de réservation",
+          "body": [
+            "Le locataire sélectionne un bateau et des dates disponibles, puis confirme le récapitulatif avant paiement.",
+            "Une réservation est créée avec un statut en attente et est confirmée une fois le paiement simulé réussi.",
+            "Aucune réservation active ne peut se chevaucher sur un même bateau."
+          ]
+        },
+        {
+          "heading": "Paiement",
+          "body": "Les paiements sont traités via Stripe en mode test uniquement. Aucune carte réelle n'est débitée et aucune transaction financière réelle n'a lieu. Les informations de carte saisies doivent être des valeurs de test Stripe."
+        },
+        {
+          "heading": "Annulation et remboursement",
+          "body": "Aucun paiement réel n'étant prélevé, les règles d'annulation et de remboursement sont simulées et n'ont aucune conséquence financière. Une réservation annulée libère simplement les dates correspondantes."
+        },
+        {
+          "heading": "Droit de rétractation",
+          "body": "Les locations prévues à une date déterminée relèveraient normalement de l'exception au droit de rétractation légal applicable aux prestations de loisirs fournies à une date convenue. Dans ce contexte fictif, cette clause est purement illustrative."
+        },
+        {
+          "heading": "Réclamations",
+          "body": "S'agissant d'une démonstration académique, aucun service après-vente n'est assuré. Toute question relative à ces conditions illustratives peut être adressée à l'équipe projet via les canaux officiels de la formation."
         }
       ]
     },

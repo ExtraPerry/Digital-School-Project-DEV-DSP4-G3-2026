@@ -85,6 +85,7 @@
       "footer_copyright": "© 2026 SailingLoc — fictional student project",
       "footer_legal": "Legal notice",
       "footer_terms": "Terms",
+      "footer_cgv": "Sales terms",
       "footer_privacy": "GDPR",
       "footer_cookies": "Cookies",
       "footer_disclaimer": "Fictional student project: no real purchase or booking can be made",
@@ -450,13 +451,13 @@
       ]
     },
     "TermsPage": {
-      "title": "Terms of use and sale",
+      "title": "Terms of use (CGU)",
       "lastUpdated": "Last updated: August 2026",
-      "disclaimer": "These terms are provided for an academic project. SailingLoc is fictional; no real contract, rental or payment is formed by using this site.",
+      "disclaimer": "These terms of use are provided for an academic project. SailingLoc is fictional; using this site forms no real contract. Sale and rental conditions are covered by the separate Conditions of sale (CGV).",
       "sections": [
         {
           "heading": "Purpose",
-          "body": "These terms govern the use of the SailingLoc demonstration platform, which simulates a peer-to-peer boat rental marketplace connecting owners and renters."
+          "body": "These terms of use (CGU) govern access to and use of the SailingLoc demonstration platform, which simulates a peer-to-peer boat rental marketplace connecting owners and renters. Conditions applying to bookings and payments are set out in the Conditions of sale (CGV)."
         },
         {
           "heading": "Account and eligibility",
@@ -471,20 +472,63 @@
           ]
         },
         {
-          "heading": "Bookings and payments",
-          "body": "Bookings use Stripe in test mode. No real money is charged and no real reservation is created. A 10% platform commission is recorded for demonstration purposes only."
-        },
-        {
-          "heading": "Cancellations",
-          "body": "Because no real transaction occurs, cancellation and refund rules are simulated and carry no financial consequence."
-        },
-        {
           "heading": "Acceptable use",
           "body": "Users must not attempt to misuse the demonstration, upload unlawful content or disrupt the service. Test data may be removed without notice."
         },
         {
+          "heading": "Intellectual property",
+          "body": "The SailingLoc name, interface and content are produced for academic purposes. Users may not reuse them for commercial ends."
+        },
+        {
+          "heading": "Availability",
+          "body": "As an academic demonstration, the platform is provided as is, without any guarantee of availability, continuity or freedom from errors."
+        },
+        {
           "heading": "Changes",
-          "body": "These terms may change as the academic project evolves. Continued use of the demonstration constitutes acceptance of the current version."
+          "body": "These terms of use may change as the academic project evolves. Continued use of the demonstration constitutes acceptance of the current version."
+        }
+      ]
+    },
+    "CGVPage": {
+      "title": "Conditions of sale (CGV)",
+      "lastUpdated": "Last updated: August 2026",
+      "disclaimer": "These conditions of sale are illustrative and part of an academic project. SailingLoc is fictional; no real sale, rental, payment or refund can occur on this platform.",
+      "sections": [
+        {
+          "heading": "Purpose and scope",
+          "body": "These conditions of sale (CGV) govern the simulated booking transactions carried out on the SailingLoc demonstration platform between a renter and a boat owner, with SailingLoc acting as an intermediary."
+        },
+        {
+          "heading": "Parties",
+          "body": "The rental contract is simulated between the owner (seller of the rental service) and the renter (buyer). SailingLoc only provides the platform that connects them and does not itself rent out any boat."
+        },
+        {
+          "heading": "Prices and platform commission",
+          "body": "Displayed prices are indicative and expressed in euros, taxes included. For each simulated rental, SailingLoc records a 10% platform commission on the total amount. As the project is fictional, no amount is actually owed or collected."
+        },
+        {
+          "heading": "Booking process",
+          "body": [
+            "The renter selects a boat and available dates, then confirms the summary before payment.",
+            "A reservation is created with a pending status and is confirmed once the simulated payment succeeds.",
+            "Overlapping active reservations on the same boat are not possible."
+          ]
+        },
+        {
+          "heading": "Payment",
+          "body": "Payments are processed through Stripe in test mode only. No real card is charged and no real financial transaction takes place. Any card details entered must be Stripe test values."
+        },
+        {
+          "heading": "Cancellation and refund",
+          "body": "Because no real payment is taken, cancellation and refund rules are simulated and carry no financial consequence. A cancelled reservation simply frees up the corresponding dates."
+        },
+        {
+          "heading": "Right of withdrawal",
+          "body": "Rentals scheduled for a specific date would normally fall under the exception to the legal right of withdrawal for leisure services provided on a set date. In this fictional context, this clause is illustrative only."
+        },
+        {
+          "heading": "Complaints",
+          "body": "As an academic demonstration, no after-sales service is provided. Any question about these illustrative conditions can be addressed to the project team through the course's official channels."
         }
       ]
     },

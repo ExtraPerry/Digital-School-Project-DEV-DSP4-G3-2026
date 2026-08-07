@@ -1,6 +1,16 @@
+import { getTranslations } from "next-intl/server";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { LegalDocument } from "@/components/legal/legal-document";
+
+export async function generateMetadata() {
+  const t = await getTranslations({
+    locale: "en",
+    namespace: "Pages.CookiePolicyPage",
+  });
+
+  return { title: `${t("title")} — SailingLoc` };
+}
 
 export default function CookiePolicyPage() {
   return (

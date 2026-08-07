@@ -17,8 +17,17 @@ export async function SiteFooter() {
           <Link className="transition-colors hover:text-white" href="/legal">
             {t("footer_legal")}
           </Link>
-          <Link className="transition-colors hover:text-white" href="/terms">
+          <Link
+            className="transition-colors hover:text-white"
+            href="/terms-of-use"
+          >
             {t("footer_terms")}
+          </Link>
+          <Link
+            className="transition-colors hover:text-white"
+            href="/terms-of-sales"
+          >
+            {t("footer_cgv")}
           </Link>
           <Link className="transition-colors hover:text-white" href="/privacy">
             {t("footer_privacy")}
