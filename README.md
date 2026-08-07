@@ -34,6 +34,64 @@
 - Régénérer les types typescript : `npx supabase gen types typescript --local --schema public > src/lib/supabase/database.types.ts`
 - Charger les photos des annonces dans le Storage : `npm run seed:media`
 
+### Hosted environment — branch `lucaslive` / Environnement en ligne
+
+**EN**: `lucaslive` runs the application against the **hosted Supabase project** instead of the local Docker stack. No application code differs from `main`: every Supabase reference is already environment-driven, so switching environments is purely a matter of `.env`.
+
+```bash
+# 1. Point the app at the hosted project (.env is gitignored — never commit it)
+NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<publishable key>
+NEXT_PRIVATE_SUPABASE_ADMIN_KEY=<secret key>
+
+# 2. Bring the hosted database up to the current migration state
+npx supabase login                                  # account with access to the project
+npx supabase link --project-ref <project-ref>
+npx supabase db push                                # applies supabase/migrations/
+
+# 3. Upload the listing photography into the hosted boat-images bucket
+npm run seed:media
+
+# 4. Run
+npm run dev
+```
+
+> **`.env` is not branch-scoped.** Git does not track it, so checking out `main` after working here leaves the app still pointing at the hosted project — and `main` is developed against the local stack. Swap `.env` back to the `npx supabase status` values when you switch, or keep the two environments in separate clones.
+
+> **Step 2 is not optional.** `npx supabase db push` is what applies `supabase/migrations/` to the hosted project. Skip it and the app runs against an out-of-date schema: features whose SQL has not landed fail at the API — for example the neutral `/search` (Home → *See all*) returns `PGRST202` and the grid shows "Search unavailable". Check what the project actually has with `npx supabase migration list --linked`. If the CLI cannot reach Postgres from your network (port 5432/6543 blocked), paste the migration file into the dashboard's **SQL Editor** instead — every statement is `create or replace`, so running it twice is harmless.
+
+### Google sign-in / Connexion Google
+
+**EN**: the **Continue with Google** button on `/login` and `/register` needs the provider enabled on the Supabase project it points at — the app code is environment-driven and needs no change.
+
+1. Google Cloud console → **APIs & Services → Credentials → Create OAuth client ID → Web application**. Add the **Supabase** callback as an authorised redirect URI: `https://<project-ref>.supabase.co/auth/v1/callback` (local: `http://127.0.0.1:54321/auth/v1/callback`). It is *not* the app's `/auth/callback` route.
+2. **Hosted**: Supabase dashboard → **Authentication → Sign In / Providers → Google** → enable, paste the client ID and secret. Add your app origin under **URL Configuration → Redirect URLs**.
+3. **Local**: put the two values in `.env` as `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` / `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET`, set `enabled = true` under `[auth.external.google]` in `supabase/config.toml`, then restart the stack.
+
+Verify without any credentials — `"google"` flips to `true` once it is on:
+
+```bash
+curl "$NEXT_PUBLIC_SUPABASE_URL/auth/v1/settings" -H "apikey: $NEXT_PUBLIC_SUPABASE_ANON_KEY"
+```
+
+**FR**: le bouton **Continuer avec Google** dépend uniquement de la configuration du projet Supabase visé (aucun code à modifier). Créez un identifiant OAuth « Application Web » dans Google Cloud avec l'URI de redirection **Supabase**, activez le fournisseur dans le tableau de bord (hébergé) ou via `config.toml` + `.env` (local), puis vérifiez avec la commande ci-dessus.
+
+### Brand assets / Ressources de marque
+
+**EN**: the logo variants (`logo-wordmark.png`, `logo-wordmark-light.png`) and the app icons (`src/app/icon.png`, `apple-icon.png`, `favicon.ico`) are **generated** from `public/images/brand/logo.png` and the lockup in `public/images/brand/logo-concepts/`. After replacing a source file, run `npm run build:brand` and commit the output.
+
+**FR**: les déclinaisons du logo et les icônes de l'application sont **générées**. Après avoir remplacé un fichier source, lancez `npm run build:brand` et versionnez le résultat.
+
+`npx supabase start` is **not** used on this branch — nothing runs in Docker. What follows from that:
+
+- `supabase/seeds/*.sql` never run against the hosted project (`db push` applies migrations only). The hosted dataset is whatever is already there; `npm run seed:media` is the one fixture step that is safe and idempotent to re-run against it, because it only touches `boat_media` and the `boat-images` bucket.
+- `next.config.ts` picks the Storage origin up from `NEXT_PUBLIC_SUPABASE_URL`, and its local-IP exception for `next/image` switches itself off as soon as the URL is a hosted one.
+- Edge functions must be deployed separately (`npx supabase functions deploy <name>`); `SITE_URL` and the Stripe secrets have to be set as project secrets, not only in `.env`.
+
+**FR**: `lucaslive` fait tourner l'application sur le **projet Supabase en ligne** plutôt que sur la stack Docker locale. Aucun code applicatif ne diffère de `main` : toutes les références à Supabase sont déjà pilotées par l'environnement, le changement se joue donc uniquement dans le `.env`.
+
+Suivez les quatre étapes ci-dessus. `npx supabase start` n'est pas utilisé sur cette branche : les seeds SQL ne s'appliquent pas au projet en ligne (`db push` ne joue que les migrations), et `npm run seed:media` reste la seule étape de fixture réexécutable sans risque.
+
 ### Local seed data & demo accounts / Données de test et comptes de démo
 
 **EN**: Running `npx supabase db reset` applies every migration and then loads the modular fixtures in `supabase/seeds/` (`01_reference_ports` → `08_demo_admin`, run alphabetically). The seeds are idempotent and use relative dates, so the dataset stays valid over time.

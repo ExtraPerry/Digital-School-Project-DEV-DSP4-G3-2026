@@ -18,6 +18,7 @@ import { useMyReviews } from "@/hooks/useMyReviews";
 import { useUpdateCurrentUser } from "@/hooks/useProfileMutations";
 import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
+import { ChangePasswordCard } from "@/components/profile/change-password-card";
 import { ReservationChatDialog } from "@/components/profile/reservation-chat-dialog";
 import {
   getReservationReview,
@@ -283,6 +284,8 @@ export function ProfilePageContent() {
           </form>
         </section>
       ) : null}
+
+      {!userLoading && !userError && user ? <ChangePasswordCard /> : null}
 
       <section className="flex flex-col gap-4">
         <div>

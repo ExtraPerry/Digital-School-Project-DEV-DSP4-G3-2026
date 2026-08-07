@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { Playfair_Display } from "next/font/google";
 import { CalendarCheck, Search, Ship, Star } from "lucide-react";
 import { getLocale, getTranslations } from "next-intl/server";
@@ -136,16 +135,30 @@ export async function LandingPage() {
           aria-labelledby="hero-heading"
           className="relative isolate overflow-hidden bg-[#1a2b48] text-white"
         >
-          <Image
-            alt={t("hero_image_alt")}
-            className="-z-20 object-cover object-center"
-            fill
-            priority
-            sizes="100vw"
-            src="/images/brand/landing-hero.webp"
+          {/*
+            Decorative backdrop, so it is hidden from assistive tech and made
+            click-through. `muted` is not a preference but the condition
+            browsers put on honouring `autoplay`; drop it and the hero freezes
+            on the poster. The poster is what paints during the first moments,
+            while the clip itself is encoded with a leading `moov` atom so the
+            browser starts playing off the first buffered chunks instead of
+            waiting for the whole file.
+
+            The footage carries no overlay of its own: `opacity-70` lets the
+            section's navy through the clip, which is what holds the white
+            copy legible against the bright sunset half of the frame.
+          */}
+          <video
+            aria-hidden
+            autoPlay
+            className="pointer-events-none absolute inset-0 -z-20 size-full object-cover object-center opacity-70"
+            loop
+            muted
+            playsInline
+            poster="/videos/hero-loop-poster.jpg"
+            preload="auto"
+            src="/videos/hero-loop.mp4"
           />
-          <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#13233d]/98 via-[#1a2b48]/82 to-[#1a2b48]/20" />
-          <div className="absolute inset-0 -z-10 bg-gradient-to-t from-[#13233d]/65 via-transparent to-[#13233d]/15" />
           <div className="mx-auto max-w-6xl px-6 py-16 md:py-24">
             <div className="grid gap-10 md:grid-cols-2 md:items-center">
               <div className="flex flex-col gap-6">

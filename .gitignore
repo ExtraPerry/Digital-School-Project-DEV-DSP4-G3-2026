@@ -20,6 +20,14 @@
 # production
 /build
 
+# video masters
+# Raw footage stays local: only the web-encoded derivatives under
+# public/videos/ are small enough to belong in the repository.
+*.mp4
+*.mov
+*.mkv
+!/public/videos/*.mp4
+
 # misc
 .DS_Store
 Thumbs.db
