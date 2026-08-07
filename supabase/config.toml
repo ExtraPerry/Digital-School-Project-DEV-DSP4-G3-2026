@@ -258,9 +258,15 @@ otp_expiry = 3600
 # session immediately and this email never goes out. The hosted project has
 # confirmations ON, which is why the "check your inbox" step only appears
 # there — test that flow against the hosted project, not the local stack.
+#
+# `content_path` is resolved from the PROJECT ROOT, not from supabase/. The
+# stock config.toml contradicts itself on this — its invite example uses
+# "./supabase/templates/…" and its notification example uses "./templates/…" —
+# and the second form fails the whole `db push` before it reaches the database:
+#   Invalid config for auth.email.template.confirmation.content_path: NotFound
 [auth.email.template.confirmation]
 subject = "Confirmez votre compte SailingLoc / Confirm your SailingLoc account"
-content_path = "./templates/confirm-signup.html"
+content_path = "./supabase/templates/confirm-signup.html"
 
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
