@@ -4,7 +4,7 @@ import { format, parseISO } from "date-fns";
 import { enUS, fr } from "date-fns/locale";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { LeaveReviewDialog } from "@/components/bookings/leave-review-dialog";
+import { LeaveReviewDialog } from "@/components/boats/leave-review-dialog";
 import { useMyReservations } from "@/hooks/useBoatReservations";
 import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";

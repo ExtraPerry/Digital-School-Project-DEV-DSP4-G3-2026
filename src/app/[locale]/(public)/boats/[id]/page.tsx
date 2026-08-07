@@ -1,10 +1,11 @@
-import Image from "next/image";
 import { Playfair_Display } from "next/font/google";
 import { Star } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
+import { BoatGallery, type BoatGalleryImage } from "@/components/boats/boat-gallery";
+import { BoatReviewPanel } from "@/components/boats/boat-review-panel";
 import { BookingCalendar } from "@/components/boats/booking-calendar";
 import createSupabaseServerClient from "@/lib/supabase/createSupabaseServerClient";
 import { BoatMediaKind, toBoatImageSet } from "@/lib/boats";
@@ -46,6 +47,21 @@ async function getBoatReviews(id: string) {
     .order("created_at", { ascending: false });
 
   return reviews ?? [];
+}
+
+/**
+ * The review panel needs to know whether there is a session before it can say
+ * anything useful, and the client-side current-user query rejects for a visitor
+ * — it would only settle after its retries. Reading the session here keeps the
+ * panel correct from the first paint.
+ */
+async function getIsAuthenticated() {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  return Boolean(user);
 }
 
 export async function generateMetadata({
@@ -102,7 +118,10 @@ export default async function BoatPage({
     );
   }
 
-  const reviews = await getBoatReviews(id);
+  const [reviews, isAuthenticated] = await Promise.all([
+    getBoatReviews(id),
+    getIsAuthenticated(),
+  ]);
 
   const typeLabel = tLanding(`search_type_${boat.type.toLowerCase()}`);
   const badgeLabel = boat.badge
@@ -123,6 +142,16 @@ export default async function BoatPage({
     ONBOARD: t("gallery_onboard_alt", { name: boat.name }),
     EXTERIOR: t("gallery_exterior_alt", { name: boat.name }),
   };
+  // The gallery is one browsable set: the cover leads, the other shots follow
+  // in the order the owner gave them. Alternative text is resolved here so the
+  // client component never needs the translations.
+  const galleryImages: BoatGalleryImage[] = [
+    ...(boat.images.cover ? [boat.images.cover] : []),
+    ...boat.images.gallery,
+  ].map((image) => ({
+    ...image,
+    alt: image.altText ?? mediaAlts[image.kind],
+  }));
 
   const characteristics = [
     { label: t("type_label"), value: typeLabel },
@@ -170,45 +199,7 @@ export default async function BoatPage({
       <div className="mx-auto max-w-6xl px-6 pb-16">
         <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-3 lg:items-start">
           <div className="flex min-w-0 flex-col gap-8 lg:col-span-2">
-            <div className="flex flex-col gap-3">
-              <div className="relative flex h-72 items-start overflow-hidden rounded-2xl bg-neutral-200 p-4 md:h-96">
-                {boat.images.cover ? (
-                  <Image
-                    alt={boat.images.cover.altText ?? boatImageAlt}
-                    className="object-cover"
-                    fill
-                    priority
-                    sizes="(min-width: 1024px) 736px, calc(100vw - 3rem)"
-                    src={boat.images.cover.url}
-                    style={{ objectPosition: boat.images.cover.focalPoint }}
-                  />
-                ) : null}
-                {badgeLabel ? (
-                  <span className="relative z-10 inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1 text-xs font-semibold text-[#1a2b48] shadow-sm backdrop-blur-sm">
-                    {badgeLabel}
-                  </span>
-                ) : null}
-              </div>
-              {boat.images.gallery.length > 0 ? (
-                <div className="grid min-w-0 grid-cols-3 gap-3">
-                  {boat.images.gallery.map((image) => (
-                    <div
-                      className="relative h-20 overflow-hidden rounded-xl bg-neutral-200 md:h-24"
-                      key={image.url}
-                    >
-                      <Image
-                        alt={image.altText ?? mediaAlts[image.kind]}
-                        className="object-cover"
-                        fill
-                        sizes="(min-width: 1024px) 235px, 31vw"
-                        src={image.url}
-                        style={{ objectPosition: image.focalPoint }}
-                      />
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-            </div>
+            <BoatGallery badgeLabel={badgeLabel} images={galleryImages} />
 
             <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
               <h2
@@ -259,31 +250,50 @@ export default async function BoatPage({
                 {t("reviews_heading", { count: reviews.length })}
               </h2>
               <div className="flex flex-col gap-5">
-                {reviews.map((review) => (
-                  <div key={review.id}>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-semibold text-[#1a2b48]">
-                        {review.author_name}
-                      </span>
-                      <div aria-hidden className="flex gap-0.5 text-[#c9866a]">
-                        {Array.from({ length: 5 }).map((_, index) => (
-                          <Star
-                            className={cn(
-                              "size-3.5",
-                              index < Math.round(review.rating)
-                                ? "fill-current"
-                                : "fill-none",
-                            )}
-                            key={index}
-                          />
-                        ))}
+                {reviews.length === 0 ? (
+                  <p className="text-sm text-neutral-500">
+                    {t("reviews_empty")}
+                  </p>
+                ) : (
+                  reviews.map((review) => (
+                    <div key={review.id}>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-semibold text-[#1a2b48]">
+                          {review.author_name}
+                        </span>
+                        <div
+                          aria-label={t("review_rating_value", {
+                            rating: review.rating.toLocaleString(locale),
+                          })}
+                          className="flex gap-0.5 text-[#c9866a]"
+                          role="img"
+                        >
+                          {Array.from({ length: 5 }).map((_, index) => (
+                            <Star
+                              aria-hidden
+                              className={cn(
+                                "size-3.5",
+                                index < Math.round(review.rating)
+                                  ? "fill-current"
+                                  : "fill-none",
+                              )}
+                              key={index}
+                            />
+                          ))}
+                        </div>
                       </div>
+                      <p className="mt-1 text-sm leading-relaxed text-neutral-600">
+                        &ldquo;{review.comment}&rdquo;
+                      </p>
                     </div>
-                    <p className="mt-1 text-sm leading-relaxed text-neutral-600">
-                      &ldquo;{review.comment}&rdquo;
-                    </p>
-                  </div>
-                ))}
+                  ))
+                )}
+
+                <BoatReviewPanel
+                  boatId={boat.id}
+                  boatName={boat.name}
+                  isAuthenticated={isAuthenticated}
+                />
               </div>
             </div>
           </div>
