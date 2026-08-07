@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed:media": "node --env-file=.env scripts/seed-boat-media.mjs",
+    "build:brand": "node scripts/build-brand-assets.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",

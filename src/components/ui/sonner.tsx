@@ -5,11 +5,15 @@ import { Toaster as Sonner, type ToasterProps } from "sonner"
 import { CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme()
+  // `theme` keeps reporting the stored or system preference even when the
+  // provider forces one, so a forced theme has to win here or the toasts stay
+  // dark on a light site. Reading both keeps the toaster tied to whatever the
+  // provider actually applies, forced or not.
+  const { forcedTheme, theme = "system" } = useTheme()
 
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme={(forcedTheme ?? theme) as ToasterProps["theme"]}
       className="toaster group"
       icons={{
         success: (

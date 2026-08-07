@@ -38,10 +38,10 @@ export function SiteHeaderAuthActions({
 
   if (!isAuthenticated) {
     return (
-      <div className="flex items-center gap-3">
+      <div className="flex shrink-0 items-center gap-2 sm:gap-3">
         <Button
           asChild
-          className="rounded-md border border-white/40 bg-transparent px-5 text-white shadow-none hover:bg-white/10"
+          className="rounded-md border border-white/40 bg-transparent px-3 text-white shadow-none hover:bg-white/10 sm:px-5"
           size="sm"
           variant="ghost"
         >
@@ -49,7 +49,7 @@ export function SiteHeaderAuthActions({
         </Button>
         <Button
           asChild
-          className="rounded-md bg-[#D68A6E] px-5 text-white hover:bg-[#c57d5f]"
+          className="hidden rounded-md bg-[#D68A6E] px-5 text-white hover:bg-[#c57d5f] sm:inline-flex"
           size="sm"
         >
           <Link href="/register">{t("nav_register")}</Link>

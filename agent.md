@@ -21,12 +21,14 @@ For product requirements, see [documentation/](documentation/).
 **SailingLoc** is a peer-to-peer boat rental platform developed as an academic project (DEV DSP4 G3 2026). The company is fictional; no real transactions occur.
 
 **Current state:** base scaffolding is complete. The following features are now implemented:
-- **Public search page** (`/search`) with port/date/type filtering, sidebar filters (type, skipper, price, length, equipment), sort, pagination, and Realtime cache invalidation.
-- **Landing page** with a hero search bar (TanStack Form + Zod) that prefills the search page.
+- **Public search page** (`/search`) with port/date/type filtering, sidebar filters (type, skipper, price, length, equipment), sort, pagination, and Realtime cache invalidation. **Every criterion is optional**: a bare `/search` is a valid neutral state listing the whole published catalogue.
+- **Landing page** with a hero search bar (TanStack Form + Zod) that prefills the search page, and a "See all" link that opens `/search` unfiltered.
+- **Database-backed listing photography**: every boat cover and gallery shot is a `public.boat_media` row pointing at an object in the public `boat-images` bucket, resolved to a public URL through the Supabase client. Only brand chrome (landing hero, auth panel) remains a static asset.
 - **Auth UI** (`/login`, `/register`) with email/password and Google OAuth callback.
 - **Owner space** (`/owner/*`): dashboard, boat CRUD, availability calendar, contractual documents upload, draft→published gating; self-serve `/become-owner` (RENTER→OWNER).
-- **Renter booking flow**: Stripe Checkout (test mode) via edge functions, booking history (`/bookings`), post-rental reviews tied to completed reservations, 10% platform commission recorded in DB.
-- **Account profile** (`/profile`): edit name/phone; past (COMPLETED) reservations with linked review; list of comments and ratings left by the user (role not shown).
+- **Renter booking flow**: Stripe Checkout (test mode) via edge functions, booking history (`/bookings`), post-rental reviews tied to completed reservations — postable from `/bookings` **and** from the boat page — 10% platform commission recorded in DB.
+- **Boat page gallery**: every `boat_media` shot is browsable (thumbnail strip, previous/next, arrow keys, full-size viewer), not just the cover.
+- **Account profile** (`/profile`): edit name/phone; change password (current password required); past (COMPLETED) reservations with linked review; list of comments and ratings left by the user (role not shown).
 - **Admin back-office** (`/admin/*`): ADMINISTRATOR-gated back-office with the seven screens of the approved maquette — dashboard KPIs, users & roles (role assignment + account suspension), listing register, read-only reservation register, review moderation queue, payments & commissions, and an append-only admin action log.
 - Supabase clients, i18n, theme, TanStack Query provider, `useSupabaseRealtime`, domain hooks for users/boats/owner/booking data.
 
@@ -43,7 +45,7 @@ For product requirements, see [documentation/](documentation/).
 | Forms        | `@tanstack/react-form` + `zod`                               |
 | Server state | `@tanstack/react-query` (15 min backup stale time)           |
 | Backend      | Supabase (Auth, Postgres, Realtime, Storage, Edge Functions) |
-| Theming      | `next-themes`                                                |
+| Theming      | `next-themes`, **forced to `light`** — see below             |
 
 
 Key dependencies are in [package.json](package.json).
@@ -98,10 +100,10 @@ src/
 │   ├── ui/                     # shadcn primitives
 │   ├── admin/                  # Admin shell + back-office feature components
 │   ├── auth/
-│   ├── boats/
-│   ├── bookings/               # Bookings list + leave-review dialog
-│   ├── profile/                # Authenticated profile page + reservation chat dialog
-│   ├── brand/
+│   ├── boats/                  # Boat card, gallery, booking calendar, review panel + dialog
+│   ├── bookings/               # Bookings list
+│   ├── profile/                # Profile page, change-password card, reservation chat dialog
+│   ├── brand/                  # SailingLocLogo (light/dark surface variants)
 │   ├── landing/
 │   ├── layout/
 │   ├── legal/                  # Legal document renderer + cookie consent banner
@@ -136,15 +138,25 @@ src/
 ├── i18n/                       # routing, request, navigation
 ├── lib/
 │   ├── utils.ts                # cn() helper
+│   ├── dates.ts                # Timezone-safe ISO calendar-date helpers
+│   ├── boats.ts                # boat_media row → renderable BoatImage
 │   └── supabase/               # Client factories + generated types
 │       └── updateSupabaseSession.ts  # Proxy session refresh helper
 └── proxy.ts                    # Session refresh + route whitelist + locale routing
 
 messages/                       # en.json, fr.json (project root)
+public/images/brand/            # Static brand chrome only (logo variants, landing hero, auth panel)
+src/app/icon.png                # App icons, generated — Next.js file conventions
+src/app/apple-icon.png
+src/app/favicon.ico
+scripts/
+├── seed-boat-media.mjs         # Uploads listing photography and writes boat_media rows
+└── build-brand-assets.mjs      # Derives the logo variants and the app icons
 supabase/
 ├── config.toml                 # Local + storage + per-function edge config
 ├── migrations/                 # SQL migrations
-├── seeds/                      # Modular local fixtures (01-06, glob-loaded; not for production)
+├── seeds/                      # Modular local fixtures (01-08, glob-loaded; not for production)
+│   └── assets/boat-images/     # Demo listing photography + media.json manifest
 └── functions/
     ├── create-booking-checkout/  # JWT required — PENDING reservation + Stripe Checkout
     │   ├── index.ts
@@ -252,6 +264,12 @@ All UI strings MUST use `next-intl` with keys in the `messages/` JSON files. Do 
 - **MUST** use `@tanstack/react-form` with a `zod` schema for validation.
 - Do **not** use raw `useState` for production form state.
 
+### Calendar dates
+
+Rental windows, availability slots and the search query string are **calendar dates**, not instants: `2026-08-06` means that day in the port, whatever timezone the browser is in. `new Date("2026-08-06")` parses as UTC midnight (the previous day west of Greenwich) and `toISOString()` shifts a local midnight back into UTC, so both round-trips corrupt the date.
+
+Convert through `[src/lib/dates.ts](src/lib/dates.ts)` (`parseISODate`, `toISODate`, `formatISODate`, `toLocalMidnight`), never through the native conversions. `date-fns` remains the tool for formatting an already-parsed `Date` in a locale.
+
 ### CRUD and data fetching
 
 - All Supabase CRUD **MUST** go through the client factories in `[src/lib/supabase/](src/lib/supabase/)`:
@@ -318,7 +336,7 @@ Configured in `[src/contexts/tanstack-query-client.tsx](src/contexts/tanstack-qu
 
 A `useSupabaseRealtime` subscription only ever fires for tables that are members of the Postgres `supabase_realtime` publication. A subscription on an unpublished table connects successfully and then **silently never invalidates**.
 
-Current members: `reservation_messages`, `users`, `user_roles`, `boats`, `payment_transactions`.
+Current members: `reservation_messages`, `users`, `user_roles`, `boats`, `payment_transactions`, `admin_audit_log`, `boat_reviews`, `boat_media`.
 
 `postgres_changes` honours RLS — a subscriber receives a row only if their own SELECT policies permit reading it (verified: a RENTER does not receive other users' `public.users` changes, an ADMINISTRATOR does). Publishing a table therefore does not widen access, but it does mean **every table added to the publication must have a correct SELECT policy first**.
 
@@ -384,8 +402,8 @@ Each admin hook also exports a `ADMIN_*_QUERY_KEY_PREFIX` constant. Mutation hoo
 | -------- | ---- | ------- |
 | `fetchCurrentUser` | `src/queries/fetchCurrentUser.ts` | Authenticated user profile |
 | `fetchCurrentUserRole` | `src/queries/fetchCurrentUserRole.ts` | Current user role |
-| `fetchBoats(filters)` | `src/queries/fetchBoats.ts` | Calls `search_available_boats` RPC; returns `PaginatedBoats` |
-| `fetchBoatFilterBounds(port)` | `src/queries/fetchBoats.ts` | Calls `get_boat_filter_bounds` RPC for slider bounds |
+| `fetchBoats(filters)` | `src/queries/fetchBoats.ts` | Calls `search_available_boats` RPC; returns `PaginatedBoats` whose rows carry a resolved `coverImage`. Null criteria are **omitted** from the RPC call, never sent as null — the function defaults them and skips the predicate |
+| `fetchBoatFilterBounds(port)` | `src/queries/fetchBoats.ts` | Calls `get_boat_filter_bounds` RPC for slider bounds; a null port asks for the whole published catalogue |
 | `fetchOwnerBoats` / `fetchOwnerBoatById` | `src/queries/fetchOwnerBoats.ts` | Owner fleet (+ port join) |
 | `fetchOwnerDocuments` | `src/queries/fetchOwnerDocuments.ts` | Owner contractual documents |
 | `fetchBoatAvailabilitySlots` / `fetchOwnerAvailabilitySlots` | `src/queries/fetchBoatAvailabilitySlots.ts` | Availability windows |
@@ -407,6 +425,7 @@ Each admin hook also exports a `ADMIN_*_QUERY_KEY_PREFIX` constant. Mutation hoo
 | `useCreateBookingCheckout` | `src/hooks/useBookingMutations.ts` | Invokes `create-booking-checkout` edge function |
 | `useCreateBoatReview` | `src/hooks/useReviewMutations.ts` | Inserts review for a COMPLETED reservation |
 | `useUpdateCurrentUser` | `src/hooks/useProfileMutations.ts` | Updates own `users` profile (name, phone) |
+| `useUpdatePassword` | `src/hooks/useProfileMutations.ts` | Changes own password. Re-checks the current one with `signInWithPassword` before `auth.updateUser` — the session cookie alone must not be enough to take an account over — and throws the `WRONG_CURRENT_PASSWORD` sentinel so the UI can blame the right field |
 | `useSendReservationMessage` | `src/hooks/useReservationMessages.ts` | Inserts a chat message on a reservation |
 | `useMyReviews` | `src/hooks/useMyReviews.ts` | Reviews written by the current user |
 | `useOwnerMutations` (multiple) | `src/hooks/useOwnerMutations.ts` | Boat CRUD, slots, documents, upgrade-to-owner |
@@ -490,14 +509,14 @@ Local secrets for edge functions live in `supabase/functions/.env` (gitignored).
 | `public.boat_reservations` | Bookings with `status`; active ones block availability | Public SELECT; writes via service-role edge functions only |
 | `public.boat_equipment_links` | Junction: boat ↔ `boat_equipment` enum | Public SELECT |
 | `public.payment_transactions` | Stripe payment records per reservation (`commission_amount`, `owner_amount`) | Renter/owner/admin SELECT; writes service-role only |
-| `public.boat_media` | Public gallery images (`boat-images` bucket) | Public SELECT; owner/admin write |
+| `public.boat_media` | Listing photography (`boat-images` bucket). `kind` (`boat_media_kind`) drives the localized alternative text and the gallery order; `focal_point` is the CSS `object-position` used when the crop is tight. `is_cover` is kept in sync with `kind` by `boat_media_cover_matches_kind`, one cover per boat, and `(boat_id, storage_path)` is unique | Public SELECT; owner/admin write |
 | `public.boat_documents` | Contractual docs (`boat-documents` bucket). `LICENSE`/`SAILOR_CV` are owner-level (`boat_id` null); `INSURANCE` is boat-scoped | Owner/admin only |
 | `public.reservation_messages` | Renter ↔ owner chat scoped to a reservation | Participants (renter, boat owner, admin) SELECT/INSERT via `private.is_reservation_participant` |
 | `public.admin_audit_log` | Append-only trace of privileged admin actions (`actor_user_id` + `actor_email_snapshot`, `action`, `target_table`, `target_id`, `details` jsonb) | Admin SELECT only. **No INSERT/UPDATE/DELETE policy or grant exists at all** — rows are written solely by `private.record_admin_action()` running as SECURITY DEFINER, so an administrator cannot forge or erase history |
 
 Column additions: `boats.is_published` / `published_at` (publish gated by required documents), `ports.slug` (unique, kebab-case), `boat_reservations.status` / `total_amount` / `currency`, `payment_transactions.commission_amount` / `owner_amount`, `boat_reviews.reservation_id`.
 
-**Enums:** `boat_type` (`SAILBOAT`, `MOTORBOAT`, `CATAMARAN`, `YACHT`), `boat_skipper_option` (`INCLUDED`, `OPTIONAL`, `NONE`), `boat_equipment` (`GPS`, `SLEEPING_BERTHS`, `EQUIPPED_KITCHEN`), `reservation_status` (`PENDING`, `CONFIRMED`, `CANCELLED`, `COMPLETED`), `boat_document_type` (`INSURANCE`, `REGISTRATION`, `LICENSE`, `OTHER`, `SAILOR_CV`), `user_account_status` (`ACTIVE`, `PENDING`, `SUSPENDED` — `PENDING` is reserved and nothing sets it), `admin_action_type` (`SET_USER_ROLE`, `SET_USER_STATUS`, `MODERATE_REVIEW`, `PUBLISH_BOAT`, `UNPUBLISH_BOAT`).
+**Enums:** `boat_type` (`SAILBOAT`, `MOTORBOAT`, `CATAMARAN`, `YACHT`), `boat_skipper_option` (`INCLUDED`, `OPTIONAL`, `NONE`), `boat_equipment` (`GPS`, `SLEEPING_BERTHS`, `EQUIPPED_KITCHEN`), `reservation_status` (`PENDING`, `CONFIRMED`, `CANCELLED`, `COMPLETED`), `boat_document_type` (`INSURANCE`, `REGISTRATION`, `LICENSE`, `OTHER`, `SAILOR_CV`), `boat_media_kind` (`COVER`, `COCKPIT`, `INTERIOR`, `ONBOARD`, `EXTERIOR`), `user_account_status` (`ACTIVE`, `PENDING`, `SUSPENDED` — `PENDING` is reserved and nothing sets it), `admin_action_type` (`SET_USER_ROLE`, `SET_USER_STATUS`, `MODERATE_REVIEW`, `PUBLISH_BOAT`, `UNPUBLISH_BOAT`).
 
 #### Admin write model (important)
 
@@ -522,7 +541,9 @@ Administrators get **no direct DML policy** on `public.users` or `public.user_ro
 
 **Admin access:** migration `20260803030811` adds permissive SELECT policies `"Admins can view all users"` and `"Admins can view all user roles"` (both `private.is_administrator()`), leaving the existing own-row policies untouched. Admin **write** access to `public.users` / `public.user_roles` is deliberately NOT opened — role and status changes go through SECURITY DEFINER RPCs so they are guarded and audited in one place.
 
-**RPCs:** `admin_global_search(p_query, p_limit)` — cross-entity admin lookup (users, boats, reviews) backing the header search field; `admin_platform_stats()` — administrator-only dashboard KPIs (members, live listings, bookings this month, commission this month); `plpgsql` with an explicit `raise ... errcode 42501` guard rather than a WHERE predicate, because an aggregate-only query with a WHERE guard returns a row of zeros to a non-admin instead of failing; `search_available_boats(...)` — paginated boat search with availability/date filtering (only `is_published` boats; blocks on `PENDING`/`CONFIRMED` reservations); `get_boat_filter_bounds(p_port_name)` — returns min/max price and length for sidebar sliders; `upgrade_current_user_to_owner()` — promotes authenticated `RENTER` → `OWNER` (email+phone already enforced by role trigger).
+**RPCs:** `admin_global_search(p_query, p_limit)` — cross-entity admin lookup (users, boats, reviews) backing the header search field; `admin_platform_stats()` — administrator-only dashboard KPIs (members, live listings, bookings this month, commission this month); `plpgsql` with an explicit `raise ... errcode 42501` guard rather than a WHERE predicate, because an aggregate-only query with a WHERE guard returns a row of zeros to a non-admin instead of failing; `search_available_boats(...)` — paginated boat search with availability/date filtering (only `is_published` boats; blocks on `PENDING`/`CONFIRMED` reservations). It also flattens the cover image onto each row (`cover_storage_bucket`, `cover_storage_path`, `cover_focal_point`, `cover_alt_text`) via a `left join lateral`, so the grid never issues a second query per page and a listing without photography still appears; `get_boat_filter_bounds(p_port_name)` — returns min/max price and length of the published catalogue for the sidebar sliders; `upgrade_current_user_to_owner()` — promotes authenticated `RENTER` → `OWNER` (email+phone already enforced by role trigger).
+
+**Search criteria are all optional** (migration `20260806154500`). `p_port_name`, `p_from_date` and `p_to_date` default to null, and null skips the matching predicate rather than matching nothing — a port-less call spans every port, and a window-less call drops the availability and reservation-conflict checks entirely. `get_boat_filter_bounds(p_port_name)` follows the same rule. This is what makes a bare `/search` a neutral catalogue instead of a page that has to invent a default port and a default week. Because Postgres refuses a defaulted parameter followed by an undefaulted one, the three defaults are inseparable: adding a new leading criterion means giving it a default too.
 
 **Constraints:** `boat_reservations_no_overlap` — `btree_gist` exclusion constraint preventing overlapping active (`PENDING`/`CONFIRMED`) reservations on the same boat. Unique partial indexes: one `LICENSE` and one `SAILOR_CV` per owner; one `INSURANCE` per boat. Unique `boat_reviews.reservation_id` (one review per rental).
 
@@ -549,7 +570,7 @@ Use the modular files in `[supabase/seeds/](supabase/seeds/)` for **local testin
 - Loaded via `[supabase/config.toml](supabase/config.toml)` `[db.seed]` glob (`sql_paths = ["./seeds/*.sql"]`, `enabled = true`). Files run **alphabetically**, hence the numeric prefixes:
   - `01_reference_ports.sql` — ports (fixed UUIDs + slugs; includes Brest)
   - `02_demo_auth_users.sql` — `auth.users` + `auth.identities` + profiles + roles
-  - `03_demo_boats.sql` — boats (incl. one draft `Horizon`), equipment, reviews, media
+  - `03_demo_boats.sql` — boats (incl. one draft `Horizon`), equipment, reviews. **No media** — see the binary fixture note below
   - `04_demo_availability.sql` — availability slots + reservations (mixed statuses)
   - `05_demo_documents.sql` — owner LICENSE/SAILOR_CV + boat INSURANCE metadata (Horizon has no insurance)
   - `06_demo_reservations.sql` — `payment_transactions` with commission split for seeded reservations
@@ -567,6 +588,37 @@ npx supabase db reset
 - When adding tables that need test data locally, add/update the matching `seeds/*.sql` file in the **same change**. Seeds run as the `postgres` role and bypass RLS.
 - Demo accounts (local only) share the password `Sailing2026!` — e.g. `jean.voisin@sailingloc.com` (admin), `marc.thevenot@example.com` (owner), `lea.bernard@example.com` (renter).
 
+#### Binary fixtures — listing photography
+
+A `boat_media` row is only meaningful next to the object it points at, and SQL cannot carry image bytes into a Storage bucket. Listing photography is therefore the **one fixture that is not a `seeds/*.sql` file**:
+
+```bash
+npx supabase db reset     # schema + SQL fixtures
+npm run seed:media        # Storage objects + boat_media rows
+```
+
+- Source of truth: `[supabase/seeds/assets/boat-images/media.json](supabase/seeds/assets/boat-images/media.json)` — declares, per boat, which file is the `COVER`, what each gallery shot shows, its `sortOrder`, and the cover's `focalPoint`. The image files sit in `supabase/seeds/assets/boat-images/{boat_id}/`.
+- `[scripts/seed-boat-media.mjs](scripts/seed-boat-media.mjs)` uploads each file to `boat-images/{boat_id}/{file}` and makes `boat_media` match the manifest exactly, **pruning rows whose object the manifest no longer declares**. It is idempotent, so re-running it is always safe.
+- It writes to whatever `NEXT_PUBLIC_SUPABASE_URL` points at and authenticates with `NEXT_PRIVATE_SUPABASE_ADMIN_KEY`, so the same command seeds the local stack and a hosted project.
+- `alt_text` is deliberately left out of the upsert: PostgREST only updates the columns it receives, so re-running never overwrites text an owner wrote. Demo listings leave it null and the UI falls back to a localized label keyed on `kind`.
+- Until it runs, listings render a neutral placeholder block instead of a photo — nothing breaks.
+- Adding a boat directory without a `media.json` entry is reported as a warning and skipped; keep the two in step in the same change.
+
+### Auth providers
+
+Email/password is the only provider that works out of the box. `/login` and `/register` also offer **Continue with Google** ([sign-in-with-google.ts](src/lib/auth/sign-in-with-google.ts) → `/auth/callback`), and that button is only as enabled as the Supabase project behind it:
+
+- **Local stack** — `[auth.external.google]` in [supabase/config.toml](supabase/config.toml). Committed with `enabled = false` on purpose: the CLI refuses to start a provider that is enabled without a client id, so flipping it before `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` / `_SECRET` are in `.env` breaks `npx supabase start` for everyone. Set them, flip it, restart the stack.
+- **Hosted project** — `config.toml` is not read at all. Providers live in the dashboard (Authentication → Sign In / Providers → Google). Until Google is enabled there, every attempt returns `validation_failed: Unsupported provider: provider is not enabled` — the browser lands on Supabase's raw JSON, because `signInWithOAuth` navigates straight to `/auth/v1/authorize`.
+- **Google Cloud** — the OAuth 2.0 *Web application* credential's authorised redirect URI is the **Supabase** callback (`https://<project-ref>.supabase.co/auth/v1/callback`, or `http://127.0.0.1:54321/auth/v1/callback` locally), not the app's own `/auth/callback` route, which Supabase redirects to afterwards.
+
+Whichever project the app points at reports the truth without any credentials:
+
+```bash
+curl "$NEXT_PUBLIC_SUPABASE_URL/auth/v1/settings" -H "apikey: $NEXT_PUBLIC_SUPABASE_ANON_KEY"
+# "external": { "google": false, ... }  ← the provider is off
+```
+
 ### Storage and other Supabase config
 
 `[supabase/config.toml](supabase/config.toml)` is the single source of truth for non-migration Supabase config:
@@ -581,11 +633,52 @@ npx supabase db reset
 
 Storage is enabled with two buckets: `boat-images` (public, gallery photos) and `boat-documents` (private, owner documents). Buckets are created in **SQL** (migration `20260709160100`) so they survive `db reset` and apply on `db push`; the `[storage.buckets.*]` blocks in `config.toml` only mirror local file-size / MIME limits. Path conventions: `boat-images/{boat_id}/...`, `boat-documents/{boat_id}/...` (boat-scoped), and `boat-documents/owners/{auth_id}/...` (owner-level LICENSE/SAILOR_CV). Edge function blocks: `[functions.create-booking-checkout]` (`verify_jwt = true`) and `[functions.stripe-webhook]` (`verify_jwt = false`).
 
+The `boat-images` path convention is load-bearing: the storage object policies authorise writes by matching `(storage.foldername(name))[1]` against a boat the caller owns, so an object stored anywhere but `{boat_id}/...` is unreachable for its owner.
+
 ### UI components
 
 - Start from shadcn CLI: `npx shadcn@latest add <component>`
 - Config: `[components.json](components.json)` — style `radix-nova`, components land in `src/components/ui/`
 - Customize shadcn primitives in-place; build feature components in `src/components/` (not `ui/`)
+
+#### The site is light-only — do not re-enable system theming
+
+Every page states its colours outright (`bg-white`, `#1a2b48`, `#f7f8fa`) and no component in `src/components/` carries a single `dark:` utility. There is no dark palette and no theme switch in the UI.
+
+The shadcn primitives, however, read `--popover`, `--input`, `--border` and friends, and `globals.css` still ships shadcn's `.dark` block. So following the operating system never produced a dark site — it produced **half** a dark one: on a dark OS the dialog turned near-black under navy text, and input borders turned white on white cards, while the pages holding them stayed light. It reproduced only on some machines, because `next-themes` stores its choice per origin: a `theme=light` left in localhost's `localStorage` masked it while production fell through to the system preference.
+
+`[src/app/[locale]/layout.tsx](src/app/[locale]/layout.tsx)` therefore passes `forcedTheme="light"` with `enableSystem={false}`. The pre-hydration script then applies `light` unconditionally — it never reads `localStorage` or `prefers-color-scheme` — and sets `color-scheme: light`, which keeps native controls (the `<select>` in the search sort and the hero bar) light too.
+
+Anything reading the theme must honour the forced value: `useTheme().theme` still reports the *stored* preference, so `[src/components/ui/sonner.tsx](src/components/ui/sonner.tsx)` reads `forcedTheme ?? theme`. Keep `.dark` in `globals.css` — it is the baseline a real dark palette would build on. Removing `forcedTheme` is a design decision, not a cleanup: it needs a dark palette for the hardcoded page colours first.
+- **Modal vs sheet:** a `Sheet` is for a panel that belongs to the edge of the screen (the mobile filter drawer). A focused form with its own submit belongs in a `Dialog` — `search-criteria-dialog.tsx` and `leave-review-dialog.tsx` are the reference implementations. Cap the height with `max-h-[calc(100dvh-2rem)]` and scroll the body, not the page, so a small viewport never hides the footer.
+- **A form seeded from props must be mounted inside the dialog content**, not beside it. `useForm` reads `defaultValues` once, and Radix unmounts dialog content on close — putting the form in a child component is what makes each open re-read the current state instead of showing a stale draft. The same reasoning applies to the search sidebar, which is keyed on the query string so a URL change remounts it.
+- **Namespaces follow ownership, not location.** A component used by a single page reads `Pages.<ThatPage>`; one shared across pages gets a namespace under `Common` (e.g. `Common.Review` for the post-rental review dialog, used by `/bookings` and `/boats/[id]`).
+
+#### Images
+
+- **Listing photography is data, not an asset.** It belongs to the listing its owner created, so it lives in the `boat-images` bucket and is described by `public.boat_media`. Never add a boat image to `public/`.
+- `[src/lib/boats.ts](src/lib/boats.ts)` is the only place a media row becomes something renderable. It exports `BoatMediaRow` (the columns every consumer must select), `toBoatImage`, `toBoatImageSet` (splits an ordered selection into cover + gallery) and `toCoverImage` (for the flattened `search_available_boats` columns). All four take a Supabase client and use `storage.getPublicUrl` — a pure string build, safe from server components and React Query alike.
+- **Resolve URLs in the data layer, not in components.** `fetchBoats` attaches `coverImage` to every row; the server pages resolve their own. Components receive a ready `BoatImage | null`.
+- Every boat image is **nullable**: a listing an owner just created has no photography. Components render the neutral `bg-neutral-200` block rather than a broken image or a stand-in photo.
+- Alternative text: prefer `alt_text` from the row (owner-authored, untranslatable), fall back to a localized string keyed on `kind`. A single stored string cannot serve both locales.
+- `next/image` needs the Storage origin allow-listed. `[next.config.ts](next.config.ts)` derives `images.remotePatterns` from `NEXT_PUBLIC_SUPABASE_URL` and narrows the path to `/storage/v1/object/public/**`, so local and hosted projects work from one config and signed URLs are never proxied through the optimizer.
+- `public/images/brand/` holds only static brand chrome (logo, landing hero, auth panel) — site design, not user content.
+- UI components use `next/image` with responsive `sizes` and the row's `focal_point` as `object-position`.
+
+#### Logo and app icons
+
+The logo is drawn in navy (`#011F4E`) and coral (`#E26D5B`) only, and the header, footer and auth panel are navy — the wordmark would vanish into its own background. Both surfaces are served from **derived** files rather than a CSS filter, which would wreck the coral sail:
+
+| File | Use |
+| ---- | --- |
+| `public/images/brand/logo-wordmark.png` | Light surfaces |
+| `public/images/brand/logo-wordmark-light.png` | Dark surfaces (navy ink repainted white) |
+| `src/app/icon.png`, `apple-icon.png`, `favicon.ico` | Browser/app icons — the mark on a navy tile, so it reads on light and dark browser chrome alike |
+
+- All five are generated by `npm run build:brand` ([scripts/build-brand-assets.mjs](scripts/build-brand-assets.mjs)) from two sources: `public/images/brand/logo.png` (mark) and the full lockup in `public/images/brand/logo-concepts/`. **Re-run it after replacing a source**, and commit the output — the app reads the derived files, not the sources.
+- The sources carry a wide transparent margin, so the script trims before anything else; laying the untrimmed wordmark out at a fixed height would shrink the visible ink to a third of its box.
+- Nothing renders the brand name as text. `[src/components/brand/sailing-loc-logo.tsx](src/components/brand/sailing-loc-logo.tsx)` is the only component that draws the logo; `Common.brand_name` survives as its `alt`, since the wordmark spells the name.
+- Next.js picks the three icons up from `src/app/` by filename convention — there is no `icons` entry in `generateMetadata`.
 
 ---
 
@@ -596,12 +689,13 @@ Do **not** commit `.env` or secret keys. Required variables:
 
 | Variable                          | Usage                                                        |
 | --------------------------------- | ------------------------------------------------------------ |
-| `NEXT_PUBLIC_SUPABASE_URL`        | Supabase project URL                                         |
+| `NEXT_PUBLIC_SUPABASE_URL`        | Supabase project URL. Also read at build time by `next.config.ts` for the image remote pattern, and by `npm run seed:media` to pick the target project |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY`   | Browser + server anon client                                 |
-| `NEXT_PRIVATE_SUPABASE_ADMIN_KEY` | Server admin client only                                     |
+| `NEXT_PRIVATE_SUPABASE_ADMIN_KEY` | Server admin client, and `npm run seed:media`                |
 | `STRIPE_SECRET_KEY`               | Stripe secret key (test mode); also in `supabase/functions/.env` |
 | `STRIPE_WEBHOOK_SECRET`           | Stripe webhook signing secret for `stripe-webhook`           |
 | `SITE_URL`                        | App origin for Checkout success/cancel redirects (e.g. `http://localhost:3000`) |
+| `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` / `_SECRET` | Read by `supabase/config.toml` for the **local** stack only. A hosted project takes its Google credentials from the dashboard |
 
 
 Obtain local values via `npx supabase status` after `npx supabase start`.
@@ -624,24 +718,50 @@ Obtain local values via `npx supabase status` after `npx supabase start`.
 4. `npx supabase start`
 5. Regenerate types to `src/lib/supabase/database.types.ts`
 6. Copy env vars from `npx supabase status` into `.env`
-7. `npm run dev`
+7. `npm run seed:media` — uploads listing photography and writes `boat_media`
+8. `npm run dev`
 
-**Verifying a change** (run all four before calling work done):
+**Verifying a change** (run all five before calling work done):
 
 ```bash
 npx supabase db reset     # migrations + seeds apply cleanly from scratch
+npm run seed:media        # listing photography reloads cleanly and idempotently
 npx tsc --noEmit          # must be empty
 npm run lint              # must not exceed the known baseline
 npm run build             # must compile
 ```
 
-Baseline lint debt (pre-existing, do not treat as regressions): 3 errors + 3 warnings — `no-explicit-any` in both edge functions, `set-state-in-effect` in `cookie-consent-banner.tsx`, and 3 unused vars under `src/components/search/`.
+Baseline lint debt (pre-existing, do not treat as regressions): 3 errors, 0 warnings — `no-explicit-any` in both edge functions (a deliberate Stripe `apiVersion` pin, already carrying a `deno-lint-ignore`) and `set-state-in-effect` in `cookie-consent-banner.tsx`.
+
+> `npm run build` reads `NEXT_PUBLIC_SUPABASE_URL` to build the image remote pattern and throws if it is missing — a build with no `.env` would otherwise ship with every listing photo returning 400.
 
 To check `messages/en.json` / `messages/fr.json` key parity:
 
 ```bash
 node -e "const e=require('./messages/en.json'),f=require('./messages/fr.json');const k=(o,p='')=>Object.entries(o).flatMap(([a,v])=>v&&typeof v==='object'?k(v,p+a+'.'):[p+a]);console.log(JSON.stringify(k(e).sort())===JSON.stringify(k(f).sort()))"
 ```
+
+### Hosted environment (branch `lucaslive`)
+
+`lucaslive` points the application at the hosted Supabase project instead of the local Docker stack. **It carries no application-code divergence from `main`** — every Supabase reference resolves from `NEXT_PUBLIC_SUPABASE_URL` / the key variables, so the environment switch lives entirely in `.env`. Keep it that way: if a change would need a branch-specific code path to work against a hosted project, the change is wrong.
+
+Consequences worth knowing before working on that branch:
+
+| | Local (`main`) | Hosted (`lucaslive`) |
+| --- | --- | --- |
+| Stack | `npx supabase start` (Docker) | none — hosted project |
+| Schema | `npx supabase db reset` | `npx supabase link` + `npx supabase db push` |
+| SQL fixtures | `supabase/seeds/*.sql` run on reset | **never run** — `db push` applies migrations only |
+| Listing photography | `npm run seed:media` | `npm run seed:media` (same command, same idempotency) |
+| `next/image` local-IP exception | on | off (switches itself by hostname) |
+| Edge functions | `npx supabase functions serve` | `npx supabase functions deploy` + project secrets |
+| Email confirmation | `enable_confirmations = false` — sign-up returns a session immediately | **on** — sign-up returns **no session**, so the "check your inbox" step only ever appears here |
+| Email templates | `[auth.email.template.*]` in `config.toml` | dashboard only — the same file has to be pasted into Authentication → Emails |
+| Outgoing email | Inbucket catches everything at `:54324` | Supabase's built-in SMTP, rate-limited to a few per hour; a real demo needs custom SMTP |
+
+**The confirmation divergence is a trap.** Locally, `signUp` hands back a session and the visitor is logged in; hosted, it returns `session: null` and the account stays dormant until the link is clicked. A sign-up flow that only redirects on success therefore looks correct on the local stack and drops hosted visitors on the home page, anonymous and unwarned. `[src/hooks/use-sign-up.ts](src/hooks/use-sign-up.ts)` returns a `SignUpOutcome` so the form can tell the two apart — test that path against the hosted project.
+
+See the runbook in [README.md](README.md).
 
 **Local testing with seed data:** update files under `[supabase/seeds/](supabase/seeds/)`, then run `npx supabase db reset` to apply migrations and seed in one step. Use this to get a repeatable local dataset for development and manual testing. Demo owner login: `marc.thevenot@example.com` / `Sailing2026!`.
 
@@ -659,8 +779,9 @@ Do **not** assume these exist. Build them when needed, following the conventions
 | Suspension does not block login | `admin_set_user_status` removes privileges and unpublishes listings, but cannot end a session or prevent re-login — that needs the Supabase Auth Admin API |
 | `boat_reservations` PII exposure | Its only SELECT policy is `for select to anon, authenticated using (true)`, so any anonymous visitor can read every booking. Pre-existing; it is also why the table is kept out of the Realtime publication. Fixing it breaks the public availability calendar, so it needs its own design pass |
 | Low-contrast coral on small text | `#D68A6E` on white is ≈3:1, below the WCAG AA 4.5:1 floor for small text. Used for action links across the owner space, landing page and admin. Fine on filled buttons (white on coral); a palette fix is a cross-cutting change |
-| No boat image uploads | `boat-images` bucket + `boat_media` table exist and are seeded with placeholder paths; no upload UI and no actual files uploaded yet |
+| No owner image upload UI | The read path is complete: `boat_media` rows and `boat-images` objects drive every listing photo on the landing page, the search grid and the boat page. What is missing is the **write** path — the owner boat form has no upload, reorder or delete control, so photography can only be loaded through `npm run seed:media`. A boat created through `/owner/boats/new` renders with a neutral placeholder |
 | No owner reservations page | Dashboard reservation/revenue/occupancy stats are placeholders until an owner bookings view lands  |
+| No password recovery flow | `/profile` can change a password when the current one is known, but the **Forgot password** link on `/login` still points at `href="#"`. Nothing calls `resetPasswordForEmail`, and there is no `/reset-password` page to land the recovery link on |
 | No Stripe Connect     | Commission is recorded in DB only (Checkout test mode); no owner payout onboarding                      |
 
 
@@ -694,4 +815,3 @@ Respect all conventions. Update `agent.md` in the **same change** when:
 
 - Verify the change complies with all rules in this file.
 - Verify `agent.md` still reflects the current project state (no stale paths, missing entries, or outdated "not implemented" notes).
-

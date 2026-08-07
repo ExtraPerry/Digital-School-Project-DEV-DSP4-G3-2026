@@ -1,0 +1,92 @@
+<!--
+  Confirmation email for a new account.
+
+  Supabase's default template is a bare link on a white page, which reads as
+  phishing rather than as SailingLoc. This one carries the brand.
+
+  Constraints that explain the shape of it:
+  - table layout and inline styles, because Gmail strips <style> blocks and
+    Outlook renders with Word's engine, which has no flexbox and no grid
+  - the logo is drawn in text rather than fetched: most clients block remote
+    images until the reader allows them, so an <img> would leave the header
+    empty on first open
+  - {{ .ConfirmationURL }} is Supabase's own placeholder; keep it exactly
+
+  Local: wired up through supabase/config.toml.
+  Hosted: paste into Authentication → Emails → Templates → Confirm signup.
+-->
+<table
+  align="center"
+  border="0"
+  cellpadding="0"
+  cellspacing="0"
+  role="presentation"
+  style="width: 100%; max-width: 560px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;"
+>
+  <tr>
+    <td style="background-color: #1a2b48; padding: 28px 32px; text-align: center;">
+      <span style="font-size: 22px; font-weight: 700; letter-spacing: -0.3px; color: #ffffff;">
+        Sailing<span style="color: #e26d5b;">Loc</span>
+      </span>
+    </td>
+  </tr>
+
+  <tr>
+    <td style="padding: 36px 32px 8px 32px;">
+      <h1 style="margin: 0 0 12px 0; font-size: 22px; line-height: 1.3; font-weight: 700; color: #1a2b48;">
+        Bienvenue à bord / Welcome aboard
+      </h1>
+      <p style="margin: 0 0 8px 0; font-size: 15px; line-height: 1.6; color: #4b5563;">
+        Confirmez votre adresse e-mail pour activer votre compte SailingLoc et
+        commencer à réserver.
+      </p>
+      <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #4b5563;">
+        Confirm your email address to activate your SailingLoc account and start
+        booking.
+      </p>
+    </td>
+  </tr>
+
+  <tr>
+    <td style="padding: 24px 32px 8px 32px;">
+      <table border="0" cellpadding="0" cellspacing="0" role="presentation">
+        <tr>
+          <td style="background-color: #d68a6e; border-radius: 8px;">
+            <a
+              href="{{ .ConfirmationURL }}"
+              style="display: inline-block; padding: 13px 28px; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none;"
+            >
+              Confirmer mon adresse / Confirm my email
+            </a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <tr>
+    <td style="padding: 16px 32px 32px 32px;">
+      <p style="margin: 0 0 6px 0; font-size: 13px; line-height: 1.6; color: #6b7280;">
+        Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur /
+        If the button does not work, paste this link into your browser:
+      </p>
+      <p style="margin: 0; font-size: 12px; line-height: 1.5; word-break: break-all;">
+        <a href="{{ .ConfirmationURL }}" style="color: #1a2b48;">{{ .ConfirmationURL }}</a>
+      </p>
+    </td>
+  </tr>
+
+  <tr>
+    <td style="padding: 20px 32px 28px 32px; border-top: 1px solid #e5e7eb;">
+      <p style="margin: 0 0 6px 0; font-size: 12px; line-height: 1.6; color: #9ca3af;">
+        Vous n'avez pas créé de compte ? Ignorez cet e-mail. /
+        Didn't create an account? You can ignore this email.
+      </p>
+      <p style="margin: 0; font-size: 12px; line-height: 1.6; color: #9ca3af;">
+        Projet étudiant fictif : aucun achat ou réservation réel ne peut être
+        effectué. / Fictional student project: no real purchase or booking can
+        be made.
+      </p>
+    </td>
+  </tr>
+</table>

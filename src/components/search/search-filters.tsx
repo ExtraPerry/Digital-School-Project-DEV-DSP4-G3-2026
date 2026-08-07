@@ -11,14 +11,6 @@ import type { BoatFilterBounds } from "@/queries/fetchBoats";
 const ALL_BOAT_TYPES = Constants.public.Enums.boat_type as readonly BoatType[];
 const ALL_EQUIPMENT = Constants.public.Enums.boat_equipment as readonly BoatEquipment[];
 
-type FilterFormValues = {
-  types: BoatType[];
-  skipperIncluded: boolean;
-  priceRange: [number, number];
-  lengthRange: [number, number];
-  equipment: BoatEquipment[];
-};
-
 export function SearchFilters({
   filters,
   bounds,

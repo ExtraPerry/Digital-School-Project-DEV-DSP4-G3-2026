@@ -1,12 +1,14 @@
 "use client";
 
 import { useForm } from "@tanstack/react-form";
+import { MailCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 import { z } from "zod";
 import { Link } from "@/i18n/navigation";
 import { AuthErrorAlert } from "@/components/auth/auth-error-alert";
 import { AuthModeTabs } from "@/components/auth/auth-mode-tabs";
-import { GoogleIcon } from "@/components/auth/google-icon";
+import { GoogleAuthButton } from "@/components/auth/google-auth-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +26,11 @@ export function SignUpForm() {
   const t = useTranslations("Pages.AuthPage");
   const { authErrorKey, isSubmitting, signUpWithEmail, continueWithGoogle } =
     useSignUp();
+  //? Holds the address the confirmation went to, which is also the flag for
+  //? "account created, waiting on the mailbox".
+  const [pendingConfirmationEmail, setPendingConfirmationEmail] = useState<
+    string | null
+  >(null);
 
   const signUpSchema = z.object({
     fullName: z.string().min(2, t("validation_full_name")),
@@ -41,9 +48,49 @@ export function SignUpForm() {
     },
     onSubmit: async ({ value }) => {
       const validatedValues = signUpSchema.parse(value);
-      await signUpWithEmail(validatedValues);
+      const outcome = await signUpWithEmail(validatedValues);
+
+      if (outcome === "confirmation-required") {
+        setPendingConfirmationEmail(validatedValues.email);
+      }
     },
   });
+
+  if (pendingConfirmationEmail) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div className="flex size-12 items-center justify-center rounded-full bg-[#D68A6E]/15 text-[#D68A6E]">
+          <MailCheck aria-hidden className="size-6" />
+        </div>
+        <div className="flex flex-col gap-2">
+          <h1
+            className={cn(playfair.className, "text-3xl font-bold text-[#1a2b48]")}
+          >
+            {t("confirm_email_title")}
+          </h1>
+          <p className="text-sm leading-relaxed text-neutral-600">
+            {t.rich("confirm_email_text", {
+              email: pendingConfirmationEmail,
+              strong: (chunks) => (
+                <strong className="font-semibold text-[#1a2b48]">
+                  {chunks}
+                </strong>
+              ),
+            })}
+          </p>
+          <p className="text-sm leading-relaxed text-neutral-500">
+            {t("confirm_email_hint")}
+          </p>
+        </div>
+        <Button
+          asChild
+          className="h-10 w-full rounded-lg bg-[#D68A6E] text-white hover:bg-[#c57d5f]"
+        >
+          <Link href="/login">{t("confirm_email_cta")}</Link>
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-8">
@@ -236,16 +283,10 @@ export function SignUpForm() {
         <Separator className="flex-1" />
       </div>
 
-      <Button
-        className="h-10 w-full gap-2 rounded-lg border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50"
-        disabled={isSubmitting}
-        onClick={() => void continueWithGoogle()}
-        type="button"
-        variant="outline"
-      >
-        <GoogleIcon />
-        {t("google_continue")}
-      </Button>
+      <GoogleAuthButton
+        isSubmitting={isSubmitting}
+        onContinue={() => void continueWithGoogle()}
+      />
 
       <p className="text-center text-sm text-neutral-600">
         {t("has_account")}{" "}

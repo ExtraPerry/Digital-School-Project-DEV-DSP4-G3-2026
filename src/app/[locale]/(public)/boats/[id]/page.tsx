@@ -4,9 +4,11 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
+import { BoatGallery, type BoatGalleryImage } from "@/components/boats/boat-gallery";
+import { BoatReviewPanel } from "@/components/boats/boat-review-panel";
 import { BookingCalendar } from "@/components/boats/booking-calendar";
 import createSupabaseServerClient from "@/lib/supabase/createSupabaseServerClient";
-import { BOAT_TYPE_GRADIENTS } from "@/lib/boats";
+import { BoatMediaKind, toBoatImageSet } from "@/lib/boats";
 import { cn } from "@/lib/utils";
 
 const playfair = Playfair_Display({
@@ -14,23 +16,26 @@ const playfair = Playfair_Display({
   weight: ["600", "700"],
 });
 
-const THUMBNAIL_GRADIENTS = [
-  "from-[#2c4870] to-[#16243d]",
-  "from-[#cfd9e3] to-[#9fb3c4]",
-  "from-[#e3a98a] to-[#c9794f]",
-];
-
 async function getBoat(id: string) {
   const supabase = await createSupabaseServerClient();
   const { data: boat } = await supabase
     .from("boats")
     .select(
-      "id, name, type, length_m, width_m, draft_m, capacity, motorization, skipper_option, price_per_day, deposit_amount, rating, badge, description, ports(name)",
+      "id, name, type, length_m, width_m, draft_m, capacity, motorization, skipper_option, price_per_day, deposit_amount, rating, badge, description, ports(name), boat_media(storage_bucket, storage_path, kind, focal_point, alt_text)",
     )
     .eq("id", id)
+    // The hero reads the cover and the strip below it reads the rest, so the
+    // gallery has to arrive in the order the owner set.
+    .order("sort_order", { referencedTable: "boat_media", ascending: true })
     .maybeSingle();
 
-  return boat;
+  if (!boat) {
+    return null;
+  }
+
+  // Resolving the Storage URLs here keeps the Supabase client in the data layer
+  // and hands the page something it can render directly.
+  return { ...boat, images: toBoatImageSet(supabase, boat.boat_media) };
 }
 
 async function getBoatReviews(id: string) {
@@ -42,6 +47,21 @@ async function getBoatReviews(id: string) {
     .order("created_at", { ascending: false });
 
   return reviews ?? [];
+}
+
+/**
+ * The review panel needs to know whether there is a session before it can say
+ * anything useful, and the client-side current-user query rejects for a visitor
+ * — it would only settle after its retries. Reading the session here keeps the
+ * panel correct from the first paint.
+ */
+async function getIsAuthenticated() {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  return Boolean(user);
 }
 
 export async function generateMetadata({
@@ -98,13 +118,40 @@ export default async function BoatPage({
     );
   }
 
-  const reviews = await getBoatReviews(id);
+  const [reviews, isAuthenticated] = await Promise.all([
+    getBoatReviews(id),
+    getIsAuthenticated(),
+  ]);
 
   const typeLabel = tLanding(`search_type_${boat.type.toLowerCase()}`);
   const badgeLabel = boat.badge
     ? tLanding(`featured_badge_${boat.badge}`)
     : null;
   const location = boat.ports?.name ?? "";
+  const boatImageAlt = t("boat_image_alt", {
+    name: boat.name,
+    type: typeLabel,
+    location,
+  });
+  // Demo listings store no alt_text, so each shot falls back to a localized
+  // label chosen by its kind. Owner-written alt text wins when present.
+  const mediaAlts: Record<BoatMediaKind, string> = {
+    COVER: boatImageAlt,
+    COCKPIT: t("gallery_cockpit_alt", { name: boat.name }),
+    INTERIOR: t("gallery_interior_alt", { name: boat.name }),
+    ONBOARD: t("gallery_onboard_alt", { name: boat.name }),
+    EXTERIOR: t("gallery_exterior_alt", { name: boat.name }),
+  };
+  // The gallery is one browsable set: the cover leads, the other shots follow
+  // in the order the owner gave them. Alternative text is resolved here so the
+  // client component never needs the translations.
+  const galleryImages: BoatGalleryImage[] = [
+    ...(boat.images.cover ? [boat.images.cover] : []),
+    ...boat.images.gallery,
+  ].map((image) => ({
+    ...image,
+    alt: image.altText ?? mediaAlts[image.kind],
+  }));
 
   const characteristics = [
     { label: t("type_label"), value: typeLabel },
@@ -150,33 +197,9 @@ export default async function BoatPage({
       </div>
 
       <div className="mx-auto max-w-6xl px-6 pb-16">
-        <div className="grid gap-8 lg:grid-cols-3 lg:items-start">
-          <div className="flex flex-col gap-8 lg:col-span-2">
-            <div className="flex flex-col gap-3">
-              <div
-                className={cn(
-                  "flex h-72 items-start rounded-2xl bg-gradient-to-br p-4 md:h-96",
-                  BOAT_TYPE_GRADIENTS[boat.type],
-                )}
-              >
-                {badgeLabel ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#1a2b48] shadow-sm">
-                    {badgeLabel}
-                  </span>
-                ) : null}
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                {THUMBNAIL_GRADIENTS.map((gradient) => (
-                  <div
-                    className={cn(
-                      "h-20 rounded-xl bg-gradient-to-br md:h-24",
-                      gradient,
-                    )}
-                    key={gradient}
-                  />
-                ))}
-              </div>
-            </div>
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-3 lg:items-start">
+          <div className="flex min-w-0 flex-col gap-8 lg:col-span-2">
+            <BoatGallery badgeLabel={badgeLabel} images={galleryImages} />
 
             <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
               <h2
@@ -227,36 +250,55 @@ export default async function BoatPage({
                 {t("reviews_heading", { count: reviews.length })}
               </h2>
               <div className="flex flex-col gap-5">
-                {reviews.map((review) => (
-                  <div key={review.id}>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-semibold text-[#1a2b48]">
-                        {review.author_name}
-                      </span>
-                      <div aria-hidden className="flex gap-0.5 text-[#c9866a]">
-                        {Array.from({ length: 5 }).map((_, index) => (
-                          <Star
-                            className={cn(
-                              "size-3.5",
-                              index < Math.round(review.rating)
-                                ? "fill-current"
-                                : "fill-none",
-                            )}
-                            key={index}
-                          />
-                        ))}
+                {reviews.length === 0 ? (
+                  <p className="text-sm text-neutral-500">
+                    {t("reviews_empty")}
+                  </p>
+                ) : (
+                  reviews.map((review) => (
+                    <div key={review.id}>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-semibold text-[#1a2b48]">
+                          {review.author_name}
+                        </span>
+                        <div
+                          aria-label={t("review_rating_value", {
+                            rating: review.rating.toLocaleString(locale),
+                          })}
+                          className="flex gap-0.5 text-[#c9866a]"
+                          role="img"
+                        >
+                          {Array.from({ length: 5 }).map((_, index) => (
+                            <Star
+                              aria-hidden
+                              className={cn(
+                                "size-3.5",
+                                index < Math.round(review.rating)
+                                  ? "fill-current"
+                                  : "fill-none",
+                              )}
+                              key={index}
+                            />
+                          ))}
+                        </div>
                       </div>
+                      <p className="mt-1 text-sm leading-relaxed text-neutral-600">
+                        &ldquo;{review.comment}&rdquo;
+                      </p>
                     </div>
-                    <p className="mt-1 text-sm leading-relaxed text-neutral-600">
-                      &ldquo;{review.comment}&rdquo;
-                    </p>
-                  </div>
-                ))}
+                  ))
+                )}
+
+                <BoatReviewPanel
+                  boatId={boat.id}
+                  boatName={boat.name}
+                  isAuthenticated={isAuthenticated}
+                />
               </div>
             </div>
           </div>
 
-          <aside className="lg:sticky lg:top-24">
+          <aside className="min-w-0 lg:sticky lg:top-24">
             <div className="flex flex-col gap-4 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
               <div className="flex flex-col gap-1">
                 <h1

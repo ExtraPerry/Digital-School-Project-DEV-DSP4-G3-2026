@@ -1,0 +1,295 @@
+{
+  "bucket": "boat-images",
+  "boats": [
+    {
+      "boatId": "30000000-0000-0000-0000-000000000001",
+      "media": [
+        {
+          "file": "cover.webp",
+          "kind": "COVER",
+          "sortOrder": 0,
+          "focalPoint": "50% 54%"
+        },
+        {
+          "file": "cockpit.webp",
+          "kind": "COCKPIT",
+          "sortOrder": 1,
+          "focalPoint": null
+        },
+        {
+          "file": "interior.webp",
+          "kind": "INTERIOR",
+          "sortOrder": 2,
+          "focalPoint": null
+        },
+        {
+          "file": "exterior.webp",
+          "kind": "EXTERIOR",
+          "sortOrder": 3,
+          "focalPoint": null
+        }
+      ]
+    },
+    {
+      "boatId": "30000000-0000-0000-0000-000000000002",
+      "media": [
+        {
+          "file": "cover.webp",
+          "kind": "COVER",
+          "sortOrder": 0,
+          "focalPoint": "50% 58%"
+        },
+        {
+          "file": "cockpit.webp",
+          "kind": "COCKPIT",
+          "sortOrder": 1,
+          "focalPoint": null
+        },
+        {
+          "file": "onboard.webp",
+          "kind": "ONBOARD",
+          "sortOrder": 2,
+          "focalPoint": null
+        },
+        {
+          "file": "exterior.webp",
+          "kind": "EXTERIOR",
+          "sortOrder": 3,
+          "focalPoint": null
+        }
+      ]
+    },
+    {
+      "boatId": "30000000-0000-0000-0000-000000000003",
+      "media": [
+        {
+          "file": "cover.webp",
+          "kind": "COVER",
+          "sortOrder": 0,
+          "focalPoint": "50% 58%"
+        },
+        {
+          "file": "cockpit.webp",
+          "kind": "COCKPIT",
+          "sortOrder": 1,
+          "focalPoint": null
+        },
+        {
+          "file": "interior.webp",
+          "kind": "INTERIOR",
+          "sortOrder": 2,
+          "focalPoint": null
+        },
+        {
+          "file": "exterior.webp",
+          "kind": "EXTERIOR",
+          "sortOrder": 3,
+          "focalPoint": null
+        }
+      ]
+    },
+    {
+      "boatId": "30000000-0000-0000-0000-000000000004",
+      "media": [
+        {
+          "file": "cover.webp",
+          "kind": "COVER",
+          "sortOrder": 0,
+          "focalPoint": "54% 58%"
+        },
+        {
+          "file": "cockpit.webp",
+          "kind": "COCKPIT",
+          "sortOrder": 1,
+          "focalPoint": null
+        },
+        {
+          "file": "interior.webp",
+          "kind": "INTERIOR",
+          "sortOrder": 2,
+          "focalPoint": null
+        },
+        {
+          "file": "exterior.webp",
+          "kind": "EXTERIOR",
+          "sortOrder": 3,
+          "focalPoint": null
+        }
+      ]
+    },
+    {
+      "boatId": "30000000-0000-0000-0000-000000000005",
+      "media": [
+        {
+          "file": "cover.webp",
+          "kind": "COVER",
+          "sortOrder": 0,
+          "focalPoint": "50% 57%"
+        },
+        {
+          "file": "cockpit.webp",
+          "kind": "COCKPIT",
+          "sortOrder": 1,
+          "focalPoint": null
+        },
+        {
+          "file": "interior.webp",
+          "kind": "INTERIOR",
+          "sortOrder": 2,
+          "focalPoint": null
+        },
+        {
+          "file": "exterior.webp",
+          "kind": "EXTERIOR",
+          "sortOrder": 3,
+          "focalPoint": null
+        }
+      ]
+    },
+    {
+      "boatId": "30000000-0000-0000-0000-000000000006",
+      "media": [
+        {
+          "file": "cover.webp",
+          "kind": "COVER",
+          "sortOrder": 0,
+          "focalPoint": "43% 58%"
+        },
+        {
+          "file": "cockpit.webp",
+          "kind": "COCKPIT",
+          "sortOrder": 1,
+          "focalPoint": null
+        },
+        {
+          "file": "interior.webp",
+          "kind": "INTERIOR",
+          "sortOrder": 2,
+          "focalPoint": null
+        },
+        {
+          "file": "exterior.webp",
+          "kind": "EXTERIOR",
+          "sortOrder": 3,
+          "focalPoint": null
+        }
+      ]
+    },
+    {
+      "boatId": "30000000-0000-0000-0000-000000000007",
+      "media": [
+        {
+          "file": "cover.webp",
+          "kind": "COVER",
+          "sortOrder": 0,
+          "focalPoint": "47% 58%"
+        },
+        {
+          "file": "cockpit.webp",
+          "kind": "COCKPIT",
+          "sortOrder": 1,
+          "focalPoint": null
+        },
+        {
+          "file": "onboard.webp",
+          "kind": "ONBOARD",
+          "sortOrder": 2,
+          "focalPoint": null
+        },
+        {
+          "file": "exterior.webp",
+          "kind": "EXTERIOR",
+          "sortOrder": 3,
+          "focalPoint": null
+        }
+      ]
+    },
+    {
+      "boatId": "30000000-0000-0000-0000-000000000008",
+      "media": [
+        {
+          "file": "cover.webp",
+          "kind": "COVER",
+          "sortOrder": 0,
+          "focalPoint": "62% 56%"
+        },
+        {
+          "file": "cockpit.webp",
+          "kind": "COCKPIT",
+          "sortOrder": 1,
+          "focalPoint": null
+        },
+        {
+          "file": "interior.webp",
+          "kind": "INTERIOR",
+          "sortOrder": 2,
+          "focalPoint": null
+        },
+        {
+          "file": "exterior.webp",
+          "kind": "EXTERIOR",
+          "sortOrder": 3,
+          "focalPoint": null
+        }
+      ]
+    },
+    {
+      "boatId": "30000000-0000-0000-0000-000000000009",
+      "media": [
+        {
+          "file": "cover.webp",
+          "kind": "COVER",
+          "sortOrder": 0,
+          "focalPoint": "64% 55%"
+        },
+        {
+          "file": "cockpit.webp",
+          "kind": "COCKPIT",
+          "sortOrder": 1,
+          "focalPoint": null
+        },
+        {
+          "file": "interior.webp",
+          "kind": "INTERIOR",
+          "sortOrder": 2,
+          "focalPoint": null
+        },
+        {
+          "file": "exterior.webp",
+          "kind": "EXTERIOR",
+          "sortOrder": 3,
+          "focalPoint": null
+        }
+      ]
+    },
+    {
+      "boatId": "30000000-0000-0000-0000-00000000000a",
+      "media": [
+        {
+          "file": "cover.webp",
+          "kind": "COVER",
+          "sortOrder": 0,
+          "focalPoint": "47% 58%"
+        },
+        {
+          "file": "cockpit.webp",
+          "kind": "COCKPIT",
+          "sortOrder": 1,
+          "focalPoint": null
+        },
+        {
+          "file": "interior.webp",
+          "kind": "INTERIOR",
+          "sortOrder": 2,
+          "focalPoint": null
+        },
+        {
+          "file": "exterior.webp",
+          "kind": "EXTERIOR",
+          "sortOrder": 3,
+          "focalPoint": null
+        }
+      ]
+    }
+  ]
+}

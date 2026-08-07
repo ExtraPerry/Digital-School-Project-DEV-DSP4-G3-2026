@@ -7,6 +7,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { BoatCard } from "@/components/boats/boat-card";
 import createSupabaseServerClient from "@/lib/supabase/createSupabaseServerClient";
+import { toBoatImageSet } from "@/lib/boats";
 import { cn } from "@/lib/utils";
 
 const playfair = Playfair_Display({
@@ -105,9 +106,15 @@ export async function LandingPage() {
     .select("name")
     .order("name");
 
+  // The embedded media is narrowed to the cover: the featured cards show one
+  // photo each. Without `!inner` a listing that has no photography yet still
+  // comes back, it simply arrives with an empty media array.
   const { data: boats } = await supabase
     .from("boats")
-    .select("id, name, type, length_m, price_per_day, rating, badge, motorization, skipper_option, ports(name)")
+    .select(
+      "id, name, type, length_m, price_per_day, rating, badge, motorization, skipper_option, ports(name), boat_media(storage_bucket, storage_path, kind, focal_point, alt_text)",
+    )
+    .eq("boat_media.is_cover", true)
     .order("rating", { ascending: false })
     .limit(4);
 
@@ -126,8 +133,32 @@ export async function LandingPage() {
         {/* Hero */}
         <section
           aria-labelledby="hero-heading"
-          className="relative overflow-hidden bg-gradient-to-br from-[#1a2b48] via-[#243a5e] to-[#3d7a8a] text-white"
+          className="relative isolate overflow-hidden bg-[#1a2b48] text-white"
         >
+          {/*
+            Decorative backdrop, so it is hidden from assistive tech and made
+            click-through. `muted` is not a preference but the condition
+            browsers put on honouring `autoplay`; drop it and the hero freezes
+            on the poster. The poster is what paints during the first moments,
+            while the clip itself is encoded with a leading `moov` atom so the
+            browser starts playing off the first buffered chunks instead of
+            waiting for the whole file.
+
+            The footage carries no overlay of its own: `opacity-70` lets the
+            section's navy through the clip, which is what holds the white
+            copy legible against the bright sunset half of the frame.
+          */}
+          <video
+            aria-hidden
+            autoPlay
+            className="pointer-events-none absolute inset-0 -z-20 size-full object-cover object-center opacity-70"
+            loop
+            muted
+            playsInline
+            poster="/videos/hero-loop-poster.jpg"
+            preload="auto"
+            src="/videos/hero-loop.mp4"
+          />
           <div className="mx-auto max-w-6xl px-6 py-16 md:py-24">
             <div className="grid gap-10 md:grid-cols-2 md:items-center">
               <div className="flex flex-col gap-6">
@@ -225,7 +256,13 @@ export async function LandingPage() {
                     skipper_option: boat.skipper_option,
                   }}
                   badgeLabel={boat.badge ? t(`featured_badge_${boat.badge}`) : undefined}
+                  coverImage={toBoatImageSet(supabase, boat.boat_media).cover}
                   href={`/boats/${boat.id}`}
+                  imageAlt={t("boat_image_alt", {
+                    name: boat.name,
+                    type: t(`search_type_${boat.type.toLowerCase()}`),
+                    location: boat.ports?.name ?? "",
+                  })}
                   key={boat.id}
                   locale={locale}
                   skipperLabel={

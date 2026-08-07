@@ -25,10 +25,10 @@ export async function generateMetadata({
   };
 }
 
-function inDays(days: number) {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
+const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+function parseISODateParam(raw: string | string[] | undefined): string | null {
+  return typeof raw === "string" && ISO_DATE_PATTERN.test(raw) ? raw : null;
 }
 
 const VALID_BOAT_TYPES = new Set(
@@ -54,25 +54,16 @@ export default async function SearchPage({
   const rawParams = await searchParams;
   setRequestLocale(locale);
 
-  const today = new Date().toISOString().slice(0, 10);
-  const defaultTo = inDays(6);
-
+  // Absent criteria stay absent. `/search` with no query string is the neutral
+  // state the landing page links to, and inventing a port or a date window here
+  // would filter the catalogue before the visitor asked for anything.
   const port =
     typeof rawParams.port === "string" && rawParams.port.trim()
       ? rawParams.port.trim()
-      : "";
+      : null;
 
-  const from =
-    typeof rawParams.from === "string" &&
-    /^\d{4}-\d{2}-\d{2}$/.test(rawParams.from)
-      ? rawParams.from
-      : today;
-
-  const to =
-    typeof rawParams.to === "string" &&
-    /^\d{4}-\d{2}-\d{2}$/.test(rawParams.to)
-      ? rawParams.to
-      : defaultTo;
+  const from = parseISODateParam(rawParams.from);
+  const to = parseISODateParam(rawParams.to);
 
   const rawType =
     typeof rawParams.type === "string" ? rawParams.type : undefined;
@@ -102,17 +93,12 @@ export default async function SearchPage({
 
   const [portsResult, boundsResult] = await Promise.all([
     supabase.from("ports").select("name").order("name"),
-    port
-      ? supabase.rpc("get_boat_filter_bounds", { p_port_name: port })
-      : Promise.resolve({ data: null, error: null }),
+    // No port means the sliders bound the whole published catalogue, which is
+    // exactly what the RPC returns when the argument is omitted.
+    supabase.rpc("get_boat_filter_bounds", port ? { p_port_name: port } : {}),
   ]);
 
   const ports = (portsResult.data ?? []).map((p) => p.name);
-
-  // Default port to first available if missing from URL
-  if (!filters.port && ports.length > 0) {
-    filters.port = ports[0];
-  }
 
   const boundsRow = boundsResult.data?.[0];
   const bounds: BoatFilterBounds = {

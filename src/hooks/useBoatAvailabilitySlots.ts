@@ -1,5 +1,6 @@
 "use client";
 
+import { NIL_UUID } from "@/constants/Realtime";
 import { useSupabaseRealtime } from "@/hooks/useSupabaseRealtime";
 import {
   fetchBoatAvailabilitySlots,
@@ -13,8 +14,6 @@ export const OWNER_AVAILABILITY_QUERY_KEY = ["owner-availability"] as const;
 export function buildBoatAvailabilityQueryKey(boatId: string) {
   return ["boat-availability", boatId] as const;
 }
-
-const NIL_UUID = "00000000-0000-0000-0000-000000000000";
 
 export function useOwnerAvailabilitySlots() {
   const { data: currentUser } = useCurrentUser();

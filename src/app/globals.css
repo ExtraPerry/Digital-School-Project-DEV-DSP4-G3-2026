@@ -128,8 +128,13 @@
   }
 }
 
-/* Owner space keeps brand light colors even when the OS/theme is dark,
-   so tables/forms stay readable on white cards. */
+/* Brand palette for the owner space, so its tables and forms pick up the
+   navy/coral tokens instead of shadcn's neutral defaults.
+
+   This block used to double as the guard against a dark OS flipping the
+   variables underneath it. That is now handled at the root — the theme
+   provider forces `light`, because the design has no dark palette — so what
+   remains here is the branding alone. */
 .owner-space {
   --background: #f4f6f9;
   --foreground: #1a2b48;

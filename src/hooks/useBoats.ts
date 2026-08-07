@@ -1,5 +1,6 @@
 "use client";
 
+import { NIL_UUID } from "@/constants/Realtime";
 import { useSupabaseRealtime } from "@/hooks/useSupabaseRealtime";
 import {
   BoatSearchFilters,
@@ -13,10 +14,6 @@ export function buildBoatsQueryKey(filters: BoatSearchFilters) {
   return [BOATS_LIST_QUERY_KEY_PREFIX, "list", filters] as const;
 }
 
-// Nil UUID — no real row will ever have this ID, so these subscriptions
-// effectively fire on any insert/update/delete in each table.
-const NIL_UUID = "00000000-0000-0000-0000-000000000000";
-
 export function useBoats(filters: BoatSearchFilters) {
   return useSupabaseRealtime<PaginatedBoats>({
     queryKey: buildBoatsQueryKey(filters),
@@ -28,6 +25,9 @@ export function useBoats(filters: BoatSearchFilters) {
         filter: `boat_id=neq.${NIL_UUID}`,
       },
       { table: "boat_reservations", filter: `boat_id=neq.${NIL_UUID}` },
+      // The RPC carries each result's cover image, so replacing a listing photo
+      // has to invalidate the grid the same way a price change does.
+      { table: "boat_media", filter: `boat_id=neq.${NIL_UUID}` },
     ],
   });
 }

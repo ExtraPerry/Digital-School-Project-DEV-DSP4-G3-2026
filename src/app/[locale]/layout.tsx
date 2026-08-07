@@ -60,10 +60,25 @@ export default async function LocaleLayout({
       <body className={cn(`${figtree.className} font-figtree antialiased`, "")}>
         <TanstackQueryClient>
           <NextIntlClientProvider>
+            {/*
+              The design is light-only: every page states its colours outright
+              (bg-white, #1a2b48, #f7f8fa) and there is no dark palette and no
+              theme switch anywhere in the UI. Following the operating system
+              therefore did not produce a dark site, it produced half a dark
+              one — the shadcn primitives read `--popover`, `--input` and
+              friends and flipped, while the pages holding them did not. A
+              visitor on a dark OS got a near-black dialog carrying navy text
+              and form fields whose borders had turned white on white.
+
+              Forcing `light` pins those variables until a dark palette is
+              actually designed. Until then, `enableSystem` is a promise the
+              stylesheet cannot keep.
+            */}
             <ThemeProvider
               attribute="class"
-              defaultTheme="system"
-              enableSystem
+              defaultTheme="light"
+              enableSystem={false}
+              forcedTheme="light"
               disableTransitionOnChange
             >
               {children}

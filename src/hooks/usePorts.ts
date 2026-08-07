@@ -1,11 +1,10 @@
 "use client";
 
+import { NIL_UUID } from "@/constants/Realtime";
 import { useSupabaseRealtime } from "@/hooks/useSupabaseRealtime";
 import { fetchPorts, type PortOption } from "@/queries/fetchPorts";
 
 export const PORTS_QUERY_KEY = ["ports"] as const;
-
-const NIL_UUID = "00000000-0000-0000-0000-000000000000";
 
 export function usePorts() {
   return useSupabaseRealtime<PortOption[]>({

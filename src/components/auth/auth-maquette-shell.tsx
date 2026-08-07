@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Playfair_Display } from "next/font/google";
 import { useTranslations } from "next-intl";
 import { SailingLocLogo } from "@/components/brand/sailing-loc-logo";
@@ -20,10 +21,19 @@ export function AuthMaquetteShell({ children }: AuthMaquetteShellProps) {
       <div className="grid flex-1 lg:grid-cols-2">
         <section
           aria-hidden
-          className="relative hidden flex-col justify-between bg-gradient-to-br from-[#1a2b48] via-[#243a5e] to-[#3d7a8a] p-10 text-white lg:flex"
+          className="relative isolate hidden flex-col justify-between overflow-hidden bg-[#1a2b48] p-10 text-white lg:flex"
         >
-          <SailingLocLogo variant="light" />
-          <div className="flex flex-col gap-4">
+          <Image
+            alt=""
+            className="-z-20 object-cover object-center"
+            fill
+            priority
+            sizes="50vw"
+            src="/images/brand/auth-sea.webp"
+          />
+          <div className="absolute inset-0 -z-10 bg-gradient-to-br from-[#13233d]/92 via-[#1a2b48]/68 to-[#3d7a8a]/28" />
+          <SailingLocLogo className="relative z-10" variant="light" />
+          <div className="relative z-10 flex flex-col gap-4">
             <p
               className={cn(
                 playfair.className,
@@ -36,7 +46,9 @@ export function AuthMaquetteShell({ children }: AuthMaquetteShellProps) {
               {t("hero_subtext")}
             </p>
           </div>
-          <p className="text-xs text-white/50">{t("hero_disclaimer")}</p>
+          <p className="relative z-10 text-xs text-white/65">
+            {t("hero_disclaimer")}
+          </p>
         </section>
 
         <section className="flex items-center justify-center bg-white px-6 py-10 sm:px-10">
